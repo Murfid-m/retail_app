@@ -1,7 +1,11 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../providers/product_provider.dart';
 import '../../models/product_model.dart';
+import '../../services/product_service.dart';
 
 class AddEditProductScreen extends StatefulWidget {
   final ProductModel? product;
@@ -18,8 +22,14 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
   final _stockController = TextEditingController();
-  final _imageUrlController = TextEditingController();
   String _selectedCategory = ProductCategory.kaos;
+  
+  // Image related
+  String? _imageUrl;
+  Uint8List? _selectedImageBytes;
+  String? _selectedImageName;
+  bool _isUploadingImage = false;
+  final ProductService _productService = ProductService();
 
   bool get _isEditing => widget.product != null;
 
@@ -31,7 +41,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       _descriptionController.text = widget.product!.description;
       _priceController.text = widget.product!.price.toStringAsFixed(0);
       _stockController.text = widget.product!.stock.toString();
-      _imageUrlController.text = widget.product!.imageUrl;
+      _imageUrl = widget.product!.imageUrl;
       _selectedCategory = widget.product!.category;
     }
   }
@@ -42,14 +52,104 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _descriptionController.dispose();
     _priceController.dispose();
     _stockController.dispose();
-    _imageUrlController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        final bytes = await image.readAsBytes();
+        setState(() {
+          _selectedImageBytes = bytes;
+          _selectedImageName = image.name;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal memilih gambar: $e')),
+        );
+      }
+    }
+  }
+
+  Future<String?> _uploadImage() async {
+    if (_selectedImageBytes == null) return _imageUrl;
+
+    setState(() {
+      _isUploadingImage = true;
+    });
+
+    try {
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_$_selectedImageName';
+      final url = await _productService.uploadProductImageBytes(
+        _selectedImageBytes!,
+        fileName,
+      );
+      setState(() {
+        _isUploadingImage = false;
+      });
+      return url;
+    } catch (e) {
+      setState(() {
+        _isUploadingImage = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal upload gambar: $e')),
+        );
+      }
+      return null;
+    }
+  }
+
+  Widget _buildImagePlaceholder() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.add_photo_alternate_outlined,
+            size: 50,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Tap untuk pilih gambar',
+            style: TextStyle(color: Colors.grey[600]),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _saveProduct() async {
     if (_formKey.currentState!.validate()) {
+      // Check if image is required for new product
+      if (!_isEditing && _selectedImageBytes == null && (_imageUrl == null || _imageUrl!.isEmpty)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pilih gambar produk terlebih dahulu')),
+        );
+        return;
+      }
+
       final productProvider =
           Provider.of<ProductProvider>(context, listen: false);
+
+      // Upload image if new image selected
+      String? finalImageUrl = _imageUrl;
+      if (_selectedImageBytes != null) {
+        finalImageUrl = await _uploadImage();
+        if (finalImageUrl == null) return; // Upload failed
+      }
 
       final product = ProductModel(
         id: widget.product?.id ?? '',
@@ -57,7 +157,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         description: _descriptionController.text.trim(),
         price: double.parse(_priceController.text),
         category: _selectedCategory,
-        imageUrl: _imageUrlController.text.trim(),
+        imageUrl: finalImageUrl ?? '',
         stock: int.parse(_stockController.text),
         createdAt: widget.product?.createdAt ?? DateTime.now(),
       );
@@ -103,53 +203,63 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Image preview
-              Container(
-                height: 200,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: _imageUrlController.text.isNotEmpty
-                      ? Image.network(
-                          _imageUrlController.text,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Center(
-                              child: Icon(
-                                Icons.image_not_supported,
-                                size: 50,
-                                color: Colors.grey,
-                              ),
-                            );
-                          },
-                        )
-                      : const Center(
-                          child: Icon(
-                            Icons.image,
-                            size: 50,
-                            color: Colors.grey,
-                          ),
-                        ),
+              // Image preview with picker
+              GestureDetector(
+                onTap: _isUploadingImage ? null : _pickImage,
+                child: Container(
+                  height: 200,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: _isUploadingImage
+                        ? const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                CircularProgressIndicator(),
+                                SizedBox(height: 8),
+                                Text('Mengupload gambar...'),
+                              ],
+                            ),
+                          )
+                        : _selectedImageBytes != null
+                            ? Image.memory(
+                                _selectedImageBytes!,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                              )
+                            : (_imageUrl != null && _imageUrl!.isNotEmpty)
+                                ? Image.network(
+                                    _imageUrl!,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return _buildImagePlaceholder();
+                                    },
+                                  )
+                                : _buildImagePlaceholder(),
+                  ),
                 ),
               ),
-              const SizedBox(height: 16),
-
-              // Image URL field
-              TextFormField(
-                controller: _imageUrlController,
-                decoration: InputDecoration(
-                  labelText: 'URL Gambar',
-                  prefixIcon: const Icon(Icons.link),
-                  border: OutlineInputBorder(
+              const SizedBox(height: 8),
+              
+              // Upload button
+              OutlinedButton.icon(
+                onPressed: _isUploadingImage ? null : _pickImage,
+                icon: const Icon(Icons.photo_library),
+                label: Text(_selectedImageBytes != null || (_imageUrl != null && _imageUrl!.isNotEmpty) 
+                    ? 'Ganti Gambar' 
+                    : 'Pilih Gambar'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                onChanged: (value) {
-                  setState(() {});
-                },
               ),
               const SizedBox(height: 16),
 

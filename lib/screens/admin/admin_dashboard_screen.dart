@@ -54,12 +54,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
               if (confirm == true && mounted) {
                 await authProvider.signOut();
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const LoginScreen(),
-                  ),
-                );
+                if (mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (context) => const LoginScreen(),
+                    ),
+                    (route) => false,
+                  );
+                }
               }
             },
           ),
