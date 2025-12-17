@@ -1,33 +1,47 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../models/order_model.dart';
 import '../models/user_model.dart';
+import '../config/supabase_config.dart';
 
 class EmailService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
-  /// Send welcome email when user registers
-  Future<bool> sendWelcomeEmail({
+  /// Send verification code email when user registers
+  Future<bool> sendVerificationCode({
     required String email,
     required String name,
+    required String verificationCode,
   }) async {
     try {
-      final response = await _supabase.functions.invoke(
-        'send-welcome-email',
-        body: {
+      // Use direct HTTP call to avoid CORS issues on Windows
+      final url = Uri.parse(
+        '${SupabaseConfig.supabaseUrl}/functions/v1/send-verification-code'
+      );
+      
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${SupabaseConfig.supabaseAnonKey}',
+        },
+        body: jsonEncode({
           'email': email,
           'name': name,
-        },
+          'verificationCode': verificationCode,
+        }),
       );
 
-      if (response.status == 200) {
-        print('Welcome email sent successfully');
+      if (response.statusCode == 200) {
+        print('Verification code email sent successfully');
         return true;
       } else {
-        print('Failed to send welcome email: ${response.data}');
+        print('Failed to send verification code email: ${response.body}');
         return false;
       }
     } catch (e) {
-      print('Error sending welcome email: $e');
+      print('Error sending verification code email: $e');
       return false;
     }
   }
