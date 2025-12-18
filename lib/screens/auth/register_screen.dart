@@ -45,9 +45,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       if (success && mounted) {
-        Navigator.pushReplacement(
+        // Direct login - go to home screen
+        Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const HomeScreen()),
+          (route) => false,
         );
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
