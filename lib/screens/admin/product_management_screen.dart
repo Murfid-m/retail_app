@@ -66,7 +66,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               filled: true,
-              fillColor: Colors.grey[100],
+
             ),
             onChanged: (value) {
               productProvider.searchProducts(value);
@@ -246,9 +246,12 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
                 children: [
                   Text(
                     product.name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFFFFC20E)
+                          : null,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -263,7 +266,9 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
                     child: Text(
                       product.category,
                       style: TextStyle(
-                        color: Theme.of(context).primaryColor,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Theme.of(context).primaryColor,
                         fontSize: 12,
                       ),
                     ),
@@ -272,7 +277,9 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
                   Text(
                     'Rp ${_formatPrice(product.price)}',
                     style: TextStyle(
-                      color: Theme.of(context).primaryColor,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Theme.of(context).primaryColor,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

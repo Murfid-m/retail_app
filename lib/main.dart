@@ -7,6 +7,7 @@ import 'providers/auth_provider.dart';
 import 'providers/product_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/order_provider.dart';
+import 'providers/theme_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/user/home_screen.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
@@ -34,14 +35,18 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => OrderProvider()),
       ],
-      child: MaterialApp(
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
         title: 'Retail App',
         debugShowCheckedModeBanner: false,
+        themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
         theme: ThemeData(
           colorScheme: ColorScheme.light(
             primary: kPrimaryColor,
@@ -53,7 +58,7 @@ class MyApp extends StatelessWidget {
           ),
           useMaterial3: true,
           // Typography using Google Fonts for a modern look
-          textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme),
+          textTheme: GoogleFonts.poppinsTextTheme(),
           scaffoldBackgroundColor: kBgColor,
           appBarTheme: AppBarTheme(
             centerTitle: true,
@@ -102,7 +107,73 @@ class MyApp extends StatelessWidget {
             showUnselectedLabels: true,
           ),
         ),
+        darkTheme: ThemeData(
+          colorScheme: ColorScheme.dark(
+            primary: kPrimaryColor,
+            secondary: kAccentColor,
+            background: const Color(0xFF121212),
+            surface: const Color(0xFF1E1E1E),
+            onPrimary: Colors.white,
+            onSecondary: Colors.white,
+            onBackground: Colors.white,
+            onSurface: Colors.white,
+          ),
+          useMaterial3: true,
+          textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme).apply(
+            bodyColor: Colors.white,
+            displayColor: Colors.white,
+          ),
+          scaffoldBackgroundColor: const Color(0xFF121212),
+          appBarTheme: AppBarTheme(
+            centerTitle: true,
+            elevation: 0,
+            backgroundColor: const Color(0xFF1E1E1E),
+            foregroundColor: Colors.white,
+            surfaceTintColor: Colors.transparent,
+          ),
+          cardTheme: CardThemeData(
+            color: const Color(0xFF1E1E1E),
+            elevation: 4,
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: const Color(0xFF2C2C2C),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              elevation: 0,
+              backgroundColor: kPrimaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              textStyle: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          floatingActionButtonTheme: FloatingActionButtonThemeData(
+            backgroundColor: kAccentColor,
+            foregroundColor: Colors.black,
+          ),
+          bottomNavigationBarTheme: BottomNavigationBarThemeData(
+            backgroundColor: const Color(0xFF1E1E1E),
+            selectedItemColor: kPrimaryColor,
+            unselectedItemColor: Colors.white54,
+            showUnselectedLabels: true,
+          ),
+        ),
         home: const AuthWrapper(),
+          );
+        },
       ),
     );
   }

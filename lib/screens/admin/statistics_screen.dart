@@ -301,7 +301,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       barRods: [
                         BarChartRodData(
                           toY: entry.value['sales'] as double,
-                          color: Theme.of(context).primaryColor,
+                          color: const Color(0xFFFFC20E),
                           width: 20,
                           borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(4),

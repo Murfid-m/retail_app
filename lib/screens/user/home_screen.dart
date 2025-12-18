@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../main.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../models/product_model.dart';
 import '../auth/login_screen.dart';
 import 'cart_screen.dart';
@@ -189,6 +191,21 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           const Divider(),
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, child) {
+              return SwitchListTile(
+                secondary: Icon(
+                  themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                ),
+                title: const Text('Mode Gelap'),
+                value: themeProvider.isDarkMode,
+                onChanged: (value) {
+                  themeProvider.toggleTheme();
+                },
+              );
+            },
+          ),
+          const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text('Keluar', style: TextStyle(color: Colors.red)),
@@ -215,9 +232,11 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.all(16.0),
           child: TextField(
             controller: _searchController,
+            style: TextStyle(color: kPrimaryColor),
             decoration: InputDecoration(
               hintText: 'Cari produk...',
-              prefixIcon: const Icon(Icons.search),
+              hintStyle: TextStyle(color: kPrimaryColor.withOpacity(0.6)),
+              prefixIcon: Icon(Icons.search, color: kPrimaryColor),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear),
@@ -407,8 +426,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         Expanded(
                           child: Text(
                             'Rp ${_formatPrice(product.price)}',
-                            style: TextStyle(
-                              color: Theme.of(context).primaryColor,
+                            style: const TextStyle(
+                              color: kPrimaryColor,
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
                             ),
