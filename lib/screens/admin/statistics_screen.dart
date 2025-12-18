@@ -256,7 +256,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                         getTitlesWidget: (value, meta) {
                           final index = value.toInt();
                           if (index >= 0 && index < chartData.length) {
-                            final date = chartData[index]['date'] as DateTime;
+                            final dateStr = chartData[index]['date'] as String;
+                            final date = DateTime.parse(dateStr);
                             return Padding(
                               padding: const EdgeInsets.only(top: 8),
                               child: Text(
@@ -301,7 +302,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       barRods: [
                         BarChartRodData(
                           toY: entry.value['sales'] as double,
-                          color: Theme.of(context).primaryColor,
+                          color: const Color(0xFFFFC20E),
                           width: 20,
                           borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(4),
