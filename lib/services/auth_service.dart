@@ -8,6 +8,7 @@ class AuthService {
   
   Stream<AuthState> get authStateChanges => _supabase.auth.onAuthStateChange;
 
+  /// Sign up - returns UserModel if successful (no email confirmation needed)
   Future<UserModel?> signUp({
     required String email,
     required String password,
@@ -19,10 +20,15 @@ class AuthService {
       final response = await _supabase.auth.signUp(
         email: email,
         password: password,
+        data: {
+          'name': name,
+          'phone': phone,
+          'address': address,
+        },
       );
 
       if (response.user != null) {
-        // Create user profile in users table
+        // Create user profile in database using upsert to avoid conflicts
         try {
           await _supabase.from('users').upsert({
             'id': response.user!.id,
@@ -32,10 +38,12 @@ class AuthService {
             'address': address,
             'is_admin': false,
             'created_at': DateTime.now().toIso8601String(),
-          });
+          }, onConflict: 'id');
+          
+          print('User profile created successfully for ${response.user!.id}');
         } catch (dbError) {
-          // If table doesn't exist or other DB error, log it but don't fail auth
           print('Database error creating profile: $dbError');
+          // Try alternative: maybe RLS issue, profile will be created on next login
         }
 
         return UserModel(
@@ -73,14 +81,19 @@ class AuthService {
           return profile;
         }
         
-        // If no profile in DB, create one
+        // If no profile in DB, create one from user metadata
+        final metadata = response.user!.userMetadata;
+        final name = metadata?['name'] ?? email.split('@').first;
+        final phone = metadata?['phone'] ?? '';
+        final address = metadata?['address'] ?? '';
+        
         try {
-          await _supabase.from('users').upsert({
+          await _supabase.from('users').insert({
             'id': response.user!.id,
             'email': email,
-            'name': email.split('@').first,
-            'phone': '',
-            'address': '',
+            'name': name,
+            'phone': phone,
+            'address': address,
             'is_admin': false,
             'created_at': DateTime.now().toIso8601String(),
           });
@@ -105,7 +118,7 @@ class AuthService {
     } on AuthException catch (e) {
       throw Exception(e.message);
     } catch (e) {
-      throw Exception('Gagal masuk: $e');
+      throw Exception('$e');
     }
   }
 

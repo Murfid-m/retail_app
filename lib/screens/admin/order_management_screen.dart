@@ -342,6 +342,9 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                                 ? Image.network(
                                     item.imageUrl,
                                     fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return const Icon(Icons.image_not_supported, size: 20, color: Colors.grey);
+                                    },
                                   )
                                 : const Icon(Icons.image, size: 20),
                           ),

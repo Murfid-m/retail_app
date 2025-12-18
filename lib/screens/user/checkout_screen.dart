@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/order_provider.dart';
+import '../../services/email_service.dart';
 import 'order_success_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
@@ -15,6 +16,7 @@ class CheckoutScreen extends StatefulWidget {
 class _CheckoutScreenState extends State<CheckoutScreen> {
   final _formKey = GlobalKey<FormState>();
   final _addressController = TextEditingController();
+  final _emailService = EmailService();
   bool _useDefaultAddress = true;
 
   @override
@@ -54,6 +56,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
 
     if (order != null && mounted) {
+      // Send order confirmation email (don't await, run in background)
+      _emailService.sendOrderConfirmation(user: user, order: order);
+      
       cartProvider.clearCart();
       Navigator.pushReplacement(
         context,
@@ -222,6 +227,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                         ? Image.network(
                                             item.product.imageUrl,
                                             fit: BoxFit.cover,
+                                            errorBuilder: (context, error, stackTrace) {
+                                              return const Icon(Icons.image_not_supported, size: 20, color: Colors.grey);
+                                            },
                                           )
                                         : const Icon(Icons.image, size: 20),
                                   ),
