@@ -2,9 +2,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/order_model.dart';
 import '../models/cart_model.dart';
 import '../models/user_model.dart';
+import 'email_service.dart';
 
 class OrderService {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final EmailService _emailService = EmailService();
 
   Future<OrderModel> createOrder({
     required UserModel user,
@@ -51,9 +53,27 @@ class OrderService {
       }
 
       // Get complete order with items
-      return await getOrderById(orderId);
+      final order = await getOrderById(orderId);
+
+      // Send email notifications (async, don't wait)
+      _sendOrderNotifications(user, order);
+
+      return order;
     } catch (e) {
       rethrow;
+    }
+  }
+
+  /// Send order notifications to user and admin
+  Future<void> _sendOrderNotifications(UserModel user, OrderModel order) async {
+    try {
+      // Send order confirmation to user
+      await _emailService.sendOrderConfirmation(user: user, order: order);
+      
+      // Notify admin about new order
+      await _emailService.notifyAdminNewOrder(order: order);
+    } catch (e) {
+      print('Error sending order notifications: $e');
     }
   }
 
@@ -108,8 +128,25 @@ class OrderService {
           .from('orders')
           .update({'status': status})
           .eq('id', orderId);
+
+      // Get updated order and send status update email
+      final order = await getOrderById(orderId);
+      _sendStatusUpdateNotification(order);
     } catch (e) {
       rethrow;
+    }
+  }
+
+  /// Send status update notification to user
+  Future<void> _sendStatusUpdateNotification(OrderModel order) async {
+    try {
+      await _emailService.sendOrderStatusUpdate(
+        email: order.userEmail,
+        name: order.userName,
+        order: order,
+      );
+    } catch (e) {
+      print('Error sending status update notification: $e');
     }
   }
 
