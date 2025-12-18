@@ -3,6 +3,9 @@ import '../models/order_model.dart';
 import '../models/cart_model.dart';
 import '../models/user_model.dart';
 import '../services/order_service.dart';
+import '../services/statistics_service.dart';
+
+
 
 class OrderProvider with ChangeNotifier {
   final OrderService _orderService = OrderService();
@@ -109,21 +112,34 @@ class OrderProvider with ChangeNotifier {
     }
   }
 
-  Future<void> loadStatistics() async {
-    _isLoading = true;
-    notifyListeners();
+Future<void> loadStatistics() async {
+  _isLoading = true;
+  _error = null;
+  notifyListeners();
 
-    try {
-      _statistics = await _orderService.getSalesStatistics();
-      _chartData = await _orderService.getDailySalesForChart(7);
-      _isLoading = false;
-      notifyListeners();
-    } catch (e) {
-      _error = e.toString();
-      _isLoading = false;
-      notifyListeners();
-    }
+  try {
+    final statisticsService = StatisticsService();
+    final data = await statisticsService.loadStatistics();
+
+    _statistics = data;
+
+    // Ambil monthly_sales_trend untuk chart
+    _chartData = (data['monthly_sales_trend'] as List)
+        .map<Map<String, dynamic>>((e) => {
+              'date': DateTime.parse('${e['month']}-01'),
+              'sales': (e['sales'] as num).toDouble(),
+            })
+        .toList();
+  } catch (e) {
+    _error = e.toString();
+    _statistics = null;
+    _chartData = [];
   }
+
+  _isLoading = false;
+  notifyListeners();
+}
+
 
   void clearError() {
     _error = null;
