@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../auth/login_screen.dart';
 import 'product_management_screen.dart';
 import 'order_management_screen.dart';
@@ -119,6 +120,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 setState(() {
                   _currentIndex = 2;
                 });
+              },
+            ),
+            const Divider(),
+            Consumer<ThemeProvider>(
+              builder: (context, themeProvider, child) {
+                return SwitchListTile(
+                  secondary: Icon(
+                    themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                  ),
+                  title: const Text('Mode Gelap'),
+                  value: themeProvider.isDarkMode,
+                  onChanged: (value) {
+                    themeProvider.toggleTheme();
+                  },
+                );
               },
             ),
             const Divider(),

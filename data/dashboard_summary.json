@@ -1,0 +1,224 @@
+{
+  "total_sales": 2261536.78,
+  "sales_by_category": {
+    "Furniture": 750688.23,
+    "Office Supplies": 722640.9,
+    "Technology": 884735.14
+  },
+  "top_products": [
+    {
+      "name": "Canon imageCLASS 2200 Advanced Copier",
+      "sales": 61599.82
+    },
+    {
+      "name": "Fellowes PB500 Electric Punch Plastic Comb Binding Machine with Manual Bind",
+      "sales": 27453.38
+    },
+    {
+      "name": "Cisco TelePresence System EX90 Videoconferencing Unit",
+      "sales": 22638.48
+    },
+    {
+      "name": "HON 5400 Series Task Chairs for Big and Tall",
+      "sales": 21870.58
+    },
+    {
+      "name": "GBC DocuBind TL300 Electric Binding System",
+      "sales": 19823.48
+    }
+  ],
+  "monthly_sales_trend": [
+    {
+      "month": "2015-01",
+      "sales": 14205.71
+    },
+    {
+      "month": "2015-02",
+      "sales": 4519.89
+    },
+    {
+      "month": "2015-03",
+      "sales": 55205.8
+    },
+    {
+      "month": "2015-04",
+      "sales": 27906.86
+    },
+    {
+      "month": "2015-05",
+      "sales": 23644.3
+    },
+    {
+      "month": "2015-06",
+      "sales": 34322.94
+    },
+    {
+      "month": "2015-07",
+      "sales": 33781.54
+    },
+    {
+      "month": "2015-08",
+      "sales": 27117.54
+    },
+    {
+      "month": "2015-09",
+      "sales": 81623.53
+    },
+    {
+      "month": "2015-10",
+      "sales": 31453.39
+    },
+    {
+      "month": "2015-11",
+      "sales": 77907.66
+    },
+    {
+      "month": "2015-12",
+      "sales": 68167.06
+    },
+    {
+      "month": "2016-01",
+      "sales": 18066.96
+    },
+    {
+      "month": "2016-02",
+      "sales": 11951.41
+    },
+    {
+      "month": "2016-03",
+      "sales": 32339.32
+    },
+    {
+      "month": "2016-04",
+      "sales": 34154.47
+    },
+    {
+      "month": "2016-05",
+      "sales": 29959.53
+    },
+    {
+      "month": "2016-06",
+      "sales": 23599.37
+    },
+    {
+      "month": "2016-07",
+      "sales": 28608.26
+    },
+    {
+      "month": "2016-08",
+      "sales": 36818.34
+    },
+    {
+      "month": "2016-09",
+      "sales": 63133.61
+    },
+    {
+      "month": "2016-10",
+      "sales": 31011.74
+    },
+    {
+      "month": "2016-11",
+      "sales": 75249.4
+    },
+    {
+      "month": "2016-12",
+      "sales": 74543.6
+    },
+    {
+      "month": "2017-01",
+      "sales": 18542.49
+    },
+    {
+      "month": "2017-02",
+      "sales": 22978.82
+    },
+    {
+      "month": "2017-03",
+      "sales": 51165.06
+    },
+    {
+      "month": "2017-04",
+      "sales": 38679.77
+    },
+    {
+      "month": "2017-05",
+      "sales": 56656.91
+    },
+    {
+      "month": "2017-06",
+      "sales": 39724.49
+    },
+    {
+      "month": "2017-07",
+      "sales": 38320.78
+    },
+    {
+      "month": "2017-08",
+      "sales": 30542.2
+    },
+    {
+      "month": "2017-09",
+      "sales": 69193.39
+    },
+    {
+      "month": "2017-10",
+      "sales": 59583.03
+    },
+    {
+      "month": "2017-11",
+      "sales": 79066.5
+    },
+    {
+      "month": "2017-12",
+      "sales": 95739.12
+    },
+    {
+      "month": "2018-01",
+      "sales": 43476.47
+    },
+    {
+      "month": "2018-02",
+      "sales": 19921.0
+    },
+    {
+      "month": "2018-03",
+      "sales": 58863.41
+    },
+    {
+      "month": "2018-04",
+      "sales": 35541.91
+    },
+    {
+      "month": "2018-05",
+      "sales": 43825.98
+    },
+    {
+      "month": "2018-06",
+      "sales": 48190.73
+    },
+    {
+      "month": "2018-07",
+      "sales": 44825.1
+    },
+    {
+      "month": "2018-08",
+      "sales": 62837.85
+    },
+    {
+      "month": "2018-09",
+      "sales": 86152.89
+    },
+    {
+      "month": "2018-10",
+      "sales": 77448.13
+    },
+    {
+      "month": "2018-11",
+      "sales": 117938.16
+    },
+    {
+      "month": "2018-12",
+      "sales": 83030.39
+    }
+  ]
+}
