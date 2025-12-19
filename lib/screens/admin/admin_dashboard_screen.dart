@@ -25,6 +25,56 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     LowStockScreen(),
   ];
 
+  void _showThemeDialog(BuildContext context, ThemeProvider themeProvider) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Pilih Tema'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<ThemePreference>(
+              title: const Text('Ikuti Perangkat'),
+              subtitle: const Text('Otomatis sesuai pengaturan sistem'),
+              value: ThemePreference.system,
+              groupValue: themeProvider.themePreference,
+              onChanged: (value) {
+                themeProvider.setThemePreference(value!);
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<ThemePreference>(
+              title: const Text('Mode Terang'),
+              subtitle: const Text('Selalu tampilan terang'),
+              value: ThemePreference.light,
+              groupValue: themeProvider.themePreference,
+              onChanged: (value) {
+                themeProvider.setThemePreference(value!);
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<ThemePreference>(
+              title: const Text('Mode Gelap'),
+              subtitle: const Text('Selalu tampilan gelap'),
+              value: ThemePreference.dark,
+              groupValue: themeProvider.themePreference,
+              onChanged: (value) {
+                themeProvider.setThemePreference(value!);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
@@ -136,17 +186,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             const Divider(),
             Consumer<ThemeProvider>(
               builder: (context, themeProvider, child) {
-                return SwitchListTile(
-                  secondary: Icon(
-                    themeProvider.isDarkMode
-                        ? Icons.dark_mode
-                        : Icons.light_mode,
+                return ListTile(
+                  leading: Icon(
+                    themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
                   ),
-                  title: const Text('Mode Gelap'),
-                  value: themeProvider.isDarkMode,
-                  onChanged: (value) {
-                    themeProvider.toggleTheme();
-                  },
+                  title: const Text('Tema Aplikasi'),
+                  subtitle: Text(
+                    themeProvider.themePreference == ThemePreference.system
+                        ? 'Ikuti Perangkat'
+                        : themeProvider.themePreference == ThemePreference.dark
+                            ? 'Mode Gelap'
+                            : 'Mode Terang',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  onTap: () => _showThemeDialog(context, themeProvider),
                 );
               },
             ),

@@ -5,13 +5,17 @@ import '../../providers/auth_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../providers/wishlist_provider.dart';
+import '../../providers/search_history_provider.dart';
 import '../../models/product_model.dart';
 import '../../widgets/skeleton_loading.dart';
+import '../../widgets/wishlist_button.dart';
 import '../auth/login_screen.dart';
 import 'cart_screen.dart';
 import 'product_detail_screen.dart';
 import 'profile_screen.dart';
 import 'order_history_screen.dart';
+import 'wishlist_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,20 +26,94 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _searchController = TextEditingController();
+  final _searchFocusNode = FocusNode();
   int _currentIndex = 0;
+  bool _showSearchHistory = false;
 
   @override
   void initState() {
     super.initState();
     Future.microtask(() {
       Provider.of<ProductProvider>(context, listen: false).loadProducts();
+      _loadWishlistAndHistory();
     });
+    
+    // Listen for focus changes
+    _searchFocusNode.addListener(() {
+      if (!_searchFocusNode.hasFocus) {
+        setState(() {
+          _showSearchHistory = false;
+        });
+      }
+    });
+  }
+
+  Future<void> _loadWishlistAndHistory() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final wishlistProvider = Provider.of<WishlistProvider>(context, listen: false);
+    final searchHistoryProvider = Provider.of<SearchHistoryProvider>(context, listen: false);
+    
+    if (authProvider.user != null) {
+      wishlistProvider.loadWishlist(authProvider.user!.id);
+    }
+    searchHistoryProvider.loadHistory();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
+  }
+
+  void _showThemeDialog(BuildContext context, ThemeProvider themeProvider) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Pilih Tema'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<ThemePreference>(
+              title: const Text('Ikuti Perangkat'),
+              subtitle: const Text('Otomatis sesuai pengaturan sistem'),
+              value: ThemePreference.system,
+              groupValue: themeProvider.themePreference,
+              onChanged: (value) {
+                themeProvider.setThemePreference(value!);
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<ThemePreference>(
+              title: const Text('Mode Terang'),
+              subtitle: const Text('Selalu tampilan terang'),
+              value: ThemePreference.light,
+              groupValue: themeProvider.themePreference,
+              onChanged: (value) {
+                themeProvider.setThemePreference(value!);
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<ThemePreference>(
+              title: const Text('Mode Gelap'),
+              subtitle: const Text('Selalu tampilan gelap'),
+              value: ThemePreference.dark,
+              groupValue: themeProvider.themePreference,
+              onChanged: (value) {
+                themeProvider.setThemePreference(value!);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -44,6 +122,23 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Retail App'),
         actions: [
+          // Wishlist button
+          Consumer<WishlistProvider>(
+            builder: (context, wishlistProvider, child) {
+              return WishlistBadge(
+                count: wishlistProvider.wishlistCount,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const WishlistScreen(),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+          // Cart button
           Consumer<CartProvider>(
             builder: (context, cart, child) {
               return Stack(
@@ -171,6 +266,34 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
+          Consumer<WishlistProvider>(
+            builder: (context, wishlistProvider, child) {
+              return ListTile(
+                leading: const Icon(Icons.favorite_outline),
+                title: const Text('Wishlist'),
+                trailing: wishlistProvider.wishlistCount > 0
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${wishlistProvider.wishlistCount}',
+                          style: const TextStyle(color: Colors.white, fontSize: 12),
+                        ),
+                      )
+                    : null,
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const WishlistScreen()),
+                  );
+                },
+              );
+            },
+          ),
           ListTile(
             leading: const Icon(Icons.receipt_long_outlined),
             title: const Text('Riwayat Pesanan'),
@@ -194,15 +317,24 @@ class _HomeScreenState extends State<HomeScreen> {
           const Divider(),
           Consumer<ThemeProvider>(
             builder: (context, themeProvider, child) {
-              return SwitchListTile(
-                secondary: Icon(
-                  themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
-                ),
-                title: const Text('Mode Gelap'),
-                value: themeProvider.isDarkMode,
-                onChanged: (value) {
-                  themeProvider.toggleTheme();
-                },
+              return Column(
+                children: [
+                  ListTile(
+                    leading: Icon(
+                      themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                    ),
+                    title: const Text('Tema Aplikasi'),
+                    subtitle: Text(
+                      themeProvider.themePreference == ThemePreference.system
+                          ? 'Ikuti Perangkat'
+                          : themeProvider.themePreference == ThemePreference.dark
+                              ? 'Mode Gelap'
+                              : 'Mode Terang',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    onTap: () => _showThemeDialog(context, themeProvider),
+                  ),
+                ],
               );
             },
           ),
@@ -228,51 +360,189 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildProductList() {
     return Column(
       children: [
-        // Search bar
+        // Search bar with history
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: TextField(
-            controller: _searchController,
-            style: TextStyle(
-              color: Theme.of(context).brightness == Brightness.dark 
-                ? kAccentColor 
-                : kPrimaryColor,
-            ),
-            decoration: InputDecoration(
-              hintText: 'Cari produk...',
-              hintStyle: TextStyle(
-                color: Theme.of(context).brightness == Brightness.dark
-                  ? kAccentColor.withOpacity(0.6)
-                  : kPrimaryColor.withOpacity(0.6),
-              ),
-              prefixIcon: Icon(
-                Icons.search, 
-                color: Theme.of(context).brightness == Brightness.dark
-                  ? kAccentColor
-                  : kPrimaryColor,
-              ),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                        Provider.of<ProductProvider>(
-                          context,
-                          listen: false,
-                        ).searchProducts('');
-                      },
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              filled: true,
-            ),
-            onChanged: (value) {
-              Provider.of<ProductProvider>(
-                context,
-                listen: false,
-              ).searchProducts(value);
+          child: Consumer<SearchHistoryProvider>(
+            builder: (context, searchHistoryProvider, child) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark 
+                        ? kAccentColor 
+                        : kPrimaryColor,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Cari produk...',
+                      hintStyle: TextStyle(
+                        color: Theme.of(context).brightness == Brightness.dark
+                          ? kAccentColor.withOpacity(0.6)
+                          : kPrimaryColor.withOpacity(0.6),
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search, 
+                        color: Theme.of(context).brightness == Brightness.dark
+                          ? kAccentColor
+                          : kPrimaryColor,
+                      ),
+                      suffixIcon: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // History button
+                          if (searchHistoryProvider.hasHistory && _searchController.text.isEmpty)
+                            IconButton(
+                              icon: Icon(
+                                Icons.history,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? kAccentColor
+                                    : kPrimaryColor,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _showSearchHistory = !_showSearchHistory;
+                                });
+                                if (_showSearchHistory) {
+                                  _searchFocusNode.requestFocus();
+                                }
+                              },
+                              tooltip: 'Riwayat pencarian',
+                            ),
+                          // Clear button
+                          if (_searchController.text.isNotEmpty)
+                            IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {
+                                  _showSearchHistory = false;
+                                });
+                                Provider.of<ProductProvider>(
+                                  context,
+                                  listen: false,
+                                ).searchProducts('');
+                              },
+                            ),
+                        ],
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        _showSearchHistory = value.isEmpty && searchHistoryProvider.hasHistory;
+                      });
+                      Provider.of<ProductProvider>(
+                        context,
+                        listen: false,
+                      ).searchProducts(value);
+                    },
+                    onTap: () {
+                      setState(() {
+                        _showSearchHistory = _searchController.text.isEmpty && searchHistoryProvider.hasHistory;
+                      });
+                    },
+                    onSubmitted: (value) {
+                      if (value.trim().isNotEmpty) {
+                        searchHistoryProvider.addToHistory(value);
+                        setState(() {
+                          _showSearchHistory = false;
+                        });
+                      }
+                    },
+                  ),
+                  // Search History Dropdown
+                  if (_showSearchHistory && searchHistoryProvider.history.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.only(top: 4),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).cardColor,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Riwayat Pencarian',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey[700],
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    searchHistoryProvider.clearHistory();
+                                    setState(() {
+                                      _showSearchHistory = false;
+                                    });
+                                  },
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    minimumSize: const Size(0, 32),
+                                  ),
+                                  child: const Text(
+                                    'Hapus Semua',
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Divider(height: 1),
+                          ...searchHistoryProvider.history.take(5).map((item) {
+                            return ListTile(
+                              dense: true,
+                              leading: const Icon(Icons.history, size: 20),
+                              title: Text(
+                                item.query,
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.close, size: 18),
+                                onPressed: () {
+                                  searchHistoryProvider.removeFromHistory(item.query);
+                                  if (searchHistoryProvider.history.isEmpty) {
+                                    setState(() {
+                                      _showSearchHistory = false;
+                                    });
+                                  }
+                                },
+                              ),
+                              onTap: () {
+                                _searchController.text = item.query;
+                                Provider.of<ProductProvider>(
+                                  context,
+                                  listen: false,
+                                ).searchProducts(item.query);
+                                setState(() {
+                                  _showSearchHistory = false;
+                                });
+                              },
+                            );
+                          }),
+                        ],
+                      ),
+                    ),
+                ],
+              );
             },
           ),
         ),
@@ -299,58 +569,66 @@ class _HomeScreenState extends State<HomeScreen> {
 
         // Product grid
         Expanded(
-          child: Consumer<ProductProvider>(
-            builder: (context, productProvider, child) {
-              if (productProvider.isLoading) {
-                return GridSkeleton(
-                  padding: const EdgeInsets.all(16),
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.7,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  itemCount: 6,
-                  itemBuilder: (context, index) => const ProductCardSkeleton(),
-                );
-              }
-
-              if (productProvider.error != null) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(productProvider.error!),
-                      ElevatedButton(
-                        onPressed: () => productProvider.loadProducts(),
-                        child: const Text('Coba Lagi'),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              final products = productProvider.products;
-
-              if (products.isEmpty) {
-                return const Center(child: Text('Tidak ada produk ditemukan'));
-              }
-
-              return RefreshIndicator(
-                onRefresh: () => productProvider.loadProducts(),
-                child: GridView.builder(
-                  padding: const EdgeInsets.all(16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                _showSearchHistory = false;
+              });
+              FocusScope.of(context).unfocus();
+            },
+            child: Consumer<ProductProvider>(
+              builder: (context, productProvider, child) {
+                if (productProvider.isLoading) {
+                  return GridSkeleton(
+                    padding: const EdgeInsets.all(16),
                     crossAxisCount: 2,
                     childAspectRatio: 0.7,
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
+                    itemCount: 6,
+                    itemBuilder: (context, index) => const ProductCardSkeleton(),
+                  );
+                }
+
+                if (productProvider.error != null) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(productProvider.error!),
+                        ElevatedButton(
+                          onPressed: () => productProvider.loadProducts(),
+                          child: const Text('Coba Lagi'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final products = productProvider.products;
+
+                if (products.isEmpty) {
+                  return const Center(child: Text('Tidak ada produk ditemukan'));
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () => productProvider.loadProducts(),
+                  child: GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 0.7,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                    ),
+                    itemCount: products.length,
+                    itemBuilder: (context, index) {
+                      return _buildProductCard(products[index]);
+                    },
                   ),
-                  itemCount: products.length,
-                  itemBuilder: (context, index) {
-                    return _buildProductCard(products[index]);
-                  },
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ],
@@ -392,7 +670,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Product image with multi-image indicator
+            // Product image with multi-image indicator and wishlist
             Expanded(
               flex: 3,
               child: Stack(
@@ -413,6 +691,48 @@ class _HomeScreenState extends State<HomeScreen> {
                             },
                           )
                         : const Icon(Icons.image, size: 50, color: Colors.grey),
+                  ),
+                  // Wishlist button
+                  Positioned(
+                    top: 4,
+                    left: 4,
+                    child: Consumer2<WishlistProvider, AuthProvider>(
+                      builder: (context, wishlistProvider, authProvider, child) {
+                        final isInWishlist = wishlistProvider.isInWishlist(product.id);
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.9),
+                            shape: BoxShape.circle,
+                          ),
+                          child: InkWell(
+                            onTap: () {
+                              if (authProvider.user != null) {
+                                wishlistProvider.toggleWishlist(authProvider.user!.id, product);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      isInWishlist 
+                                          ? 'Dihapus dari wishlist' 
+                                          : 'Ditambahkan ke wishlist',
+                                    ),
+                                    duration: const Duration(seconds: 1),
+                                  ),
+                                );
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(20),
+                            child: Padding(
+                              padding: const EdgeInsets.all(6),
+                              child: Icon(
+                                isInWishlist ? Icons.favorite : Icons.favorite_border,
+                                color: isInWishlist ? Colors.red : Colors.grey,
+                                size: 18,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                   // Multi-image indicator
                   if (product.allImages.length > 1)
