@@ -17,11 +17,19 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    ProductManagementScreen(),
-    OrderManagementScreen(),
-    StatisticsScreen(),
+  List<Widget> get _screens => [
+    const ProductManagementScreen(),
+    const OrderManagementScreen(),
+    StatisticsScreen(onNavigateToOrders: _switchToOrderTab),
   ];
+  
+  void _switchToOrderTab() {
+    setState(() {
+      _currentIndex = 1; // Switch to Order Management tab
+    });
+  }
+
+
 
   @override
   Widget build(BuildContext context) {

@@ -55,8 +55,11 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
       message = 'Filter diterapkan: ${DateFormat('dd MMM').format(startDate)} - ${DateFormat('dd MMM yyyy').format(endDate)}';
     }
     
-    if (orderProvider.selectedStatus != null) {
-      message += ' + Status: ${_getStatusLabel(orderProvider.selectedStatus!)}';
+    if (orderProvider.selectedStatuses.isNotEmpty) {
+      final statusLabels = orderProvider.selectedStatuses
+          .map((status) => _getStatusLabel(status))
+          .toList();
+      message += ' + Status: ${statusLabels.join(', ')}';
     }
     
     ScaffoldMessenger.of(context).showSnackBar(
@@ -223,19 +226,21 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
   }
 
   Widget _buildStatusChip(String status, OrderProvider orderProvider) {
-    final isSelected = (status == 'Semua Status' && orderProvider.selectedStatus == null) ||
-        orderProvider.selectedStatus == status;
+    final isSelected = (status == 'Semua Status' && orderProvider.selectedStatuses.isEmpty) ||
+        orderProvider.selectedStatuses.contains(status.toLowerCase());
 
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(
         label: Text(_getStatusLabel(status)),
         selected: isSelected,
+        selectedColor: Theme.of(context).primaryColor,
+        checkmarkColor: Colors.white,
         onSelected: (selected) {
           if (status == 'Semua Status') {
-            orderProvider.filterByStatus(null);
+            orderProvider.filterByStatus(null); // Clear all status filters
           } else {
-            orderProvider.filterByStatus(status);
+            orderProvider.toggleStatusFilter(status.toLowerCase());
           }
         },
       ),
@@ -288,7 +293,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
   Widget _buildClearAllFiltersChip(OrderProvider orderProvider) {
     final hasActiveFilters = orderProvider.startDate != null || 
                            orderProvider.endDate != null || 
-                           orderProvider.selectedStatus != null || 
+                           orderProvider.selectedStatuses.isNotEmpty || 
                            orderProvider.searchQuery.isNotEmpty;
     
     return ActionChip(
@@ -397,8 +402,15 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     List<String> activeFilters = [];
     
     // Add status filter info
-    if (orderProvider.selectedStatus != null) {
-      activeFilters.add('Status: ${_getStatusLabel(orderProvider.selectedStatus!)}');
+    if (orderProvider.selectedStatuses.isNotEmpty) {
+      final statusLabels = orderProvider.selectedStatuses
+          .map((status) => _getStatusLabel(status))
+          .toList();
+      if (statusLabels.length == 1) {
+        activeFilters.add('Status: ${statusLabels.first}');
+      } else {
+        activeFilters.add('Status: ${statusLabels.join(', ')}');
+      }
     }
     
     // Add date filter info
@@ -840,9 +852,10 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                     return ChoiceChip(
                       label: Text(_getStatusText(status)),
                       selected: order.status == status,
+                      selectedColor: _getStatusColor(status),
                       onSelected: (selected) {
                         if (selected && order.status != status) {
-                          orderProvider.updateOrderStatus(order.id, status);
+                          _updateOrderStatus(orderProvider, order.id, order.status, status);
                         }
                       },
                     );
@@ -949,6 +962,86 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         return 'Dibatalkan';
       default:
         return status;
+    }
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case OrderStatus.pending:
+        return Colors.orange[100]!;
+      case OrderStatus.processing:
+        return Colors.blue[100]!;
+      case OrderStatus.shipped:
+        return Colors.purple[100]!;
+      case OrderStatus.delivered:
+        return Colors.green[100]!;
+      case OrderStatus.cancelled:
+        return Colors.red[100]!;
+      default:
+        return Colors.grey[100]!;
+    }
+  }
+
+  Future<void> _updateOrderStatus(OrderProvider orderProvider, String orderId, String currentStatus, String newStatus) async {
+    // Show confirmation dialog
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Konfirmasi Perubahan Status'),
+        content: Text(
+          'Apakah Anda yakin ingin mengubah status pesanan dari "${_getStatusText(currentStatus)}" ke "${_getStatusText(newStatus)}"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Ya, Ubah'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await orderProvider.updateOrderStatus(orderId, newStatus);
+        
+        // Show success message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Status pesanan berhasil diubah ke "${_getStatusText(newStatus)}"',
+              ),
+              backgroundColor: Colors.green[600],
+              duration: const Duration(seconds: 3),
+              action: SnackBarAction(
+                label: 'OK',
+                textColor: Colors.white,
+                onPressed: () {
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                },
+              ),
+            ),
+          );
+          
+          // Reapply current filters to refresh the view
+          orderProvider.loadAllOrders();
+        }
+      } catch (e) {
+        // Show error message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal mengubah status pesanan: $e'),
+              backgroundColor: Colors.red[600],
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
     }
   }
 }

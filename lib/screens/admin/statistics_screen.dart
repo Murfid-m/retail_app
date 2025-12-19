@@ -3,9 +3,12 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../providers/order_provider.dart';
+import 'order_management_screen.dart';
 
 class StatisticsScreen extends StatefulWidget {
-  const StatisticsScreen({super.key});
+  final VoidCallback? onNavigateToOrders;
+  
+  const StatisticsScreen({super.key, this.onNavigateToOrders});
 
   @override
   State<StatisticsScreen> createState() => _StatisticsScreenState();
@@ -23,6 +26,75 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   String _formatPrice(double price) {
     return price.toStringAsFixed(0).replaceAllMapped(
         RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+  }
+
+  void _navigateToOrdersWithFilter(String period) {
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    final now = DateTime.now();
+    DateTime? startDate;
+    DateTime? endDate;
+
+    switch (period) {
+      case 'Hari Ini':
+        startDate = DateTime(now.year, now.month, now.day);
+        endDate = DateTime(now.year, now.month, now.day);
+        break;
+      case 'Minggu Ini':
+        final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+        startDate = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+        endDate = DateTime(now.year, now.month, now.day);
+        break;
+      case 'Bulan Ini':
+        startDate = DateTime(now.year, now.month, 1);
+        endDate = DateTime(now.year, now.month, now.day);
+        break;
+      case 'Total':
+        // Clear all filters for total view
+        orderProvider.clearFilters();
+        break;
+    }
+
+    // Apply filter only if not Total
+    if (period != 'Total') {
+      if (startDate != null && endDate != null) {
+        orderProvider.filterByDateRange(startDate, endDate);
+      } else {
+        orderProvider.filterByDateRange(null, null);
+      }
+    }
+
+    // Show feedback message
+    String message = 'Menampilkan pesanan ';
+    switch (period) {
+      case 'Hari Ini':
+        message += 'hari ini (${DateFormat('dd MMM yyyy').format(DateTime.now())})';
+        break;
+      case 'Minggu Ini':
+        message += 'minggu ini';
+        break;
+      case 'Bulan Ini':
+        message += 'bulan ini (${DateFormat('MMMM yyyy').format(DateTime.now())})';
+        break;
+      case 'Total':
+        message += 'keseluruhan';
+        break;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green[600],
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
+    // Switch to Order Management tab
+    if (widget.onNavigateToOrders != null) {
+      // Delay navigation to allow snackbar to show
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        widget.onNavigateToOrders!();
+      });
+    }
   }
 
   @override
@@ -139,12 +211,15 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _navigateToOrdersWithFilter(title),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
@@ -167,24 +242,36 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 12),
-            Text(
+              ),
+              const SizedBox(height: 12),
+              Text(
               value,
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
+              ),
+              const SizedBox(height: 4),
+              Text(
               subtitle,
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 12,
               ),
-            ),
-          ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 12,
+                  color: Colors.grey[400],
+                ),
+              ],
+              ),
+            ],
+          ),
         ),
       ),
     );
