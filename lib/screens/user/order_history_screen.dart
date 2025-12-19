@@ -172,7 +172,9 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                   'Rp ${_formatPrice(order.totalAmount)}',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Theme.of(context).primaryColor,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFFFFC20E)
+                        : Theme.of(context).primaryColor,
                   ),
                 ),
               ],

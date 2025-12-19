@@ -53,18 +53,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Statistik'),
-        backgroundColor: const Color(0xFFFFC20E),
-        foregroundColor: Colors.black,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.dataset),
-            tooltip: 'Seed Data Testing',
-            onPressed: _showSeedDataDialog,
-          ),
-        ],
-      ),
       body: Consumer<OrderProvider>(
         builder: (context, orderProvider, child) {
         if (orderProvider.isLoading) {
@@ -141,59 +129,98 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         return RefreshIndicator(
           onRefresh: () => orderProvider.loadStatistics(),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Seed data button if stats are 0
-                if (isAllZero)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.orange[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.orange),
-                    ),
-                    child: Column(
-                      children: [
-                        const Icon(Icons.info_outline, color: Colors.orange, size: 32),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Belum ada data statistik',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Gunakan data testing untuk melihat contoh statistik',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                // Custom AppBar with margin
+                Container(
+                  margin: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFC20E),
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Statistik',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 12),
-                        ElevatedButton.icon(
-                          onPressed: _showSeedDataDialog,
-                          icon: const Icon(Icons.dataset),
-                          label: const Text('Seed Data Testing'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFFC20E),
-                            foregroundColor: Colors.black,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.dataset, color: Colors.black),
+                        tooltip: 'Seed Data Testing',
+                        onPressed: _showSeedDataDialog,
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Content with horizontal padding
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Seed data button if stats are 0
+                      if (isAllZero)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.orange[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.orange),
+                          ),
+                          child: Column(
+                            children: [
+                              const Icon(Icons.info_outline, color: Colors.orange, size: 32),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Belum ada data statistik',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Gunakan data testing untuk melihat contoh statistik',
+                                style: TextStyle(fontSize: 12, color: Colors.grey),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 12),
+                              ElevatedButton.icon(
+                                onPressed: _showSeedDataDialog,
+                                icon: const Icon(Icons.dataset),
+                                label: const Text('Seed Data Testing'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFFFC20E),
+                                  foregroundColor: Colors.black,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                
-                // Date range filter
-                _buildDateRangeFilter(orderProvider),
-                const SizedBox(height: 16),
-                
-                // Statistics cards
-                _buildStatisticsCards(stats),
-                const SizedBox(height: 24),
+                      
+                      // Date range filter
+                      _buildDateRangeFilter(orderProvider),
+                      const SizedBox(height: 16),
+                      
+                      // Statistics cards
+                      _buildStatisticsCards(stats),
+                      const SizedBox(height: 24),
 
-                // Sales chart
-                _buildSalesChart(orderProvider.chartData),
+                      // Sales chart
+                      _buildSalesChart(orderProvider.chartData),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -572,7 +599,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.grey[200],
+          color: Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: Colors.grey[400]!),
         ),

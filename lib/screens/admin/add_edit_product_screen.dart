@@ -539,6 +539,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                   return ElevatedButton(
                     onPressed: productProvider.isLoading ? null : _saveProduct,
                     style: ElevatedButton.styleFrom(
+                      backgroundColor: _isEditing ? const Color(0xFFFFC20E) : null,
+                      foregroundColor: _isEditing ? Colors.black : null,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),

@@ -57,19 +57,6 @@ class _LowStockScreenState extends State<LowStockScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Stok Rendah'),
-        backgroundColor: const Color(0xFFFFC20E),
-        foregroundColor: Colors.black,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              Provider.of<ProductProvider>(context, listen: false).loadLowStockProducts();
-            },
-          ),
-        ],
-      ),
       body: Consumer<ProductProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
@@ -109,70 +96,122 @@ class _LowStockScreenState extends State<LowStockScreen> {
             );
           }
 
-          return Column(
-            children: [
-              // Warning banner
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                color: Colors.orange[50],
-                child: Row(
-                  children: [
-                    const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${lowStockProducts.length} Produk Stok Rendah',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                // Custom AppBar with margin
+                Container(
+                  margin: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFC20E),
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Stok Rendah',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
                           ),
-                          const Text(
-                            'Segera restock untuk menghindari kehabisan',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                        ],
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: _isNotifying ? null : _sendLowStockNotification,
-                      icon: _isNotifying 
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.email, size: 18),
-                      label: Text(_isNotifying ? 'Mengirim...' : 'Kirim Notif'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFFC20E),
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      IconButton(
+                        icon: const Icon(Icons.refresh, color: Colors.black),
+                        onPressed: () {
+                          Provider.of<ProductProvider>(context, listen: false).loadLowStockProducts();
+                        },
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Product list
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: () => provider.loadLowStockProducts(),
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: lowStockProducts.length,
-                    itemBuilder: (context, index) {
-                      final product = lowStockProducts[index];
-                      return _buildProductCard(product);
-                    },
+                    ],
                   ),
                 ),
-              ),
-            ],
+                
+                // Content with horizontal padding
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    children: [
+                      // Warning banner
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF0080C6).withOpacity(0.2)
+                              : Colors.orange[50],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${lowStockProducts.length} Produk Stok Rendah',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.white
+                                          : Colors.black,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Segera restock untuk menghindari kehabisan',
+                                    style: TextStyle(
+                                      fontSize: 12, 
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.grey[400]
+                                          : Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: _isNotifying ? null : _sendLowStockNotification,
+                              icon: _isNotifying 
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : const Icon(Icons.email, size: 18),
+                              label: Text(_isNotifying ? 'Mengirim...' : 'Kirim Notif'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFFFC20E),
+                                foregroundColor: Colors.black,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Product list
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: lowStockProducts.length,
+                        itemBuilder: (context, index) {
+                          final product = lowStockProducts[index];
+                          return _buildProductCard(product);
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           );
         },
       ),
