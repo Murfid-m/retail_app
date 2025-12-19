@@ -56,6 +56,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Date range filter
+                _buildDateRangeFilter(orderProvider),
+                const SizedBox(height: 16),
+                
                 // Statistics cards
                 _buildStatisticsCards(stats),
                 const SizedBox(height: 24),
@@ -327,5 +331,111 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       return '${(price / 1000).toStringAsFixed(0)}K';
     }
     return price.toStringAsFixed(0);
+  }
+
+  Widget _buildDateRangeFilter(OrderProvider provider) {
+    final hasDateRange = provider.statsStartDate != null && provider.statsEndDate != null;
+    
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.date_range, size: 20),
+                const SizedBox(width: 8),
+                const Text(
+                  'Filter Tanggal',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                if (hasDateRange)
+                  TextButton.icon(
+                    onPressed: () => provider.clearStatsDateRange(),
+                    icon: const Icon(Icons.clear, size: 18),
+                    label: const Text('Reset'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.red,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (hasDateRange)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFC20E).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFFC20E)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.calendar_today, size: 16, color: Color(0xFFFFC20E)),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${DateFormat('dd MMM yyyy').format(provider.statsStartDate!)} - ${DateFormat('dd MMM yyyy').format(provider.statsEndDate!)}',
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              )
+            else
+              const Text(
+                'Menampilkan data keseluruhan',
+                style: TextStyle(color: Colors.grey),
+              ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _showDateRangePicker(context, provider),
+                icon: const Icon(Icons.calendar_month),
+                label: const Text('Pilih Rentang Tanggal'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFFC20E),
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showDateRangePicker(BuildContext context, OrderProvider provider) async {
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      initialDateRange: provider.statsStartDate != null && provider.statsEndDate != null
+          ? DateTimeRange(
+              start: provider.statsStartDate!,
+              end: provider.statsEndDate!,
+            )
+          : null,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFFFFC20E),
+              onPrimary: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      provider.setStatsDateRange(picked.start, picked.end);
+    }
   }
 }
