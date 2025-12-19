@@ -3,6 +3,7 @@ class ReviewModel {
   final String productId;
   final String userId;
   final String userName;
+  final String? userAvatarUrl;
   final int rating;
   final String comment;
   final DateTime createdAt;
@@ -12,6 +13,7 @@ class ReviewModel {
     required this.productId,
     required this.userId,
     required this.userName,
+    this.userAvatarUrl,
     required this.rating,
     required this.comment,
     required this.createdAt,
@@ -20,10 +22,14 @@ class ReviewModel {
   factory ReviewModel.fromJson(Map<String, dynamic> json) {
     // Handle nested user data from join query
     String userName = 'Anonymous';
+    String? avatarUrl;
+    
     if (json['users'] != null && json['users']['name'] != null) {
       userName = json['users']['name'];
+      avatarUrl = json['users']['avatar_url'];
     } else if (json['user_name'] != null) {
       userName = json['user_name'];
+      avatarUrl = json['user_avatar_url'];
     }
 
     return ReviewModel(
@@ -31,6 +37,7 @@ class ReviewModel {
       productId: json['product_id'] ?? '',
       userId: json['user_id'] ?? '',
       userName: userName,
+      userAvatarUrl: avatarUrl,
       rating: json['rating'] ?? 0,
       comment: json['comment'] ?? '',
       createdAt: DateTime.parse(

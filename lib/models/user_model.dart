@@ -4,6 +4,7 @@ class UserModel {
   final String name;
   final String phone;
   final String address;
+  final String? avatarUrl;
   final bool isAdmin;
   final bool isVerified;
   final DateTime createdAt;
@@ -14,6 +15,7 @@ class UserModel {
     required this.name,
     required this.phone,
     required this.address,
+    this.avatarUrl,
     this.isAdmin = false,
     this.isVerified = false,
     required this.createdAt,
@@ -26,6 +28,7 @@ class UserModel {
       name: json['name'] ?? '',
       phone: json['phone'] ?? '',
       address: json['address'] ?? '',
+      avatarUrl: json['avatar_url'],
       isAdmin: json['is_admin'] ?? false,
       isVerified: json['is_verified'] ?? false,
       createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
@@ -39,6 +42,7 @@ class UserModel {
       'name': name,
       'phone': phone,
       'address': address,
+      'avatar_url': avatarUrl,
       'is_admin': isAdmin,
       'is_verified': isVerified,
       'created_at': createdAt.toIso8601String(),
@@ -51,6 +55,7 @@ class UserModel {
     String? name,
     String? phone,
     String? address,
+    String? avatarUrl,
     bool? isAdmin,
     bool? isVerified,
     DateTime? createdAt,
@@ -61,6 +66,7 @@ class UserModel {
       name: name ?? this.name,
       phone: phone ?? this.phone,
       address: address ?? this.address,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
       isAdmin: isAdmin ?? this.isAdmin,
       isVerified: isVerified ?? this.isVerified,
       createdAt: createdAt ?? this.createdAt,

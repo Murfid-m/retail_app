@@ -316,6 +316,7 @@ class AuthService {
       'name': user.name,
       'phone': user.phone,
       'address': user.address,
+      'avatar_url': user.avatarUrl,
     }).eq('id', user.id);
   }
 

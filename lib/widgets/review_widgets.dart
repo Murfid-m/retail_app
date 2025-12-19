@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../models/review_model.dart';
 import 'star_rating.dart';
 
@@ -172,12 +173,18 @@ class ReviewCard extends StatelessWidget {
           children: [
             Row(
               children: [
+                // Avatar with user photo or initial
                 CircleAvatar(
                   backgroundColor: Theme.of(context).primaryColor,
-                  child: Text(
-                    review.userName.substring(0, 1).toUpperCase(),
-                    style: const TextStyle(color: Colors.white),
-                  ),
+                  backgroundImage: review.userAvatarUrl != null && review.userAvatarUrl!.isNotEmpty
+                      ? CachedNetworkImageProvider(review.userAvatarUrl!)
+                      : null,
+                  child: review.userAvatarUrl == null || review.userAvatarUrl!.isEmpty
+                      ? Text(
+                          review.userName.substring(0, 1).toUpperCase(),
+                          style: const TextStyle(color: Colors.white),
+                        )
+                      : null,
                 ),
                 const SizedBox(width: 12),
                 Expanded(

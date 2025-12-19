@@ -9,7 +9,7 @@ class ReviewService {
     try {
       final response = await _supabase
           .from('reviews')
-          .select('*, users(name)')
+          .select('*, users(name, avatar_url)')
           .eq('product_id', productId)
           .order('created_at', ascending: false);
 
@@ -97,7 +97,7 @@ class ReviewService {
     try {
       final response = await _supabase
           .from('reviews')
-          .select('*, users(name)')
+          .select('*, users(name, avatar_url)')
           .eq('product_id', productId)
           .eq('user_id', userId)
           .maybeSingle();

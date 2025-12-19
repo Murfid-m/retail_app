@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../main.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/product_provider.dart';
@@ -236,13 +237,30 @@ class _HomeScreenState extends State<HomeScreen> {
             accountEmail: Text(user?.email ?? ''),
             currentAccountPicture: CircleAvatar(
               backgroundColor: Colors.white,
-              child: Text(
-                (user?.name ?? 'G').substring(0, 1).toUpperCase(),
-                style: TextStyle(
-                  fontSize: 24,
-                  color: Theme.of(context).primaryColor,
-                ),
-              ),
+              child: user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty
+                  ? ClipOval(
+                      child: CachedNetworkImage(
+                        imageUrl: user.avatarUrl!,
+                        fit: BoxFit.cover,
+                        width: 72,
+                        height: 72,
+                        placeholder: (context, url) => const CircularProgressIndicator(),
+                        errorWidget: (context, url, error) => Text(
+                          (user.name ?? 'G').substring(0, 1).toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 24,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Text(
+                      (user?.name ?? 'G').substring(0, 1).toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 24,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
             ),
           ),
           ListTile(
