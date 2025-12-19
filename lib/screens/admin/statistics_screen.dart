@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../providers/order_provider.dart';
+import '../../widgets/seed_data_dialog.dart';
 
 class StatisticsScreen extends StatefulWidget {
   const StatisticsScreen({super.key});
@@ -25,10 +26,42 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
   }
 
+  Future<void> _showSeedDataDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const SeedDataDialog(),
+    );
+
+    if (result == true && mounted) {
+      // Reload statistics after seeding
+      Provider.of<OrderProvider>(context, listen: false).loadStatistics();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Data berhasil di-seed! Statistik telah diperbarui.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Consumer<OrderProvider>(
-      builder: (context, orderProvider, child) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Statistik'),
+        backgroundColor: const Color(0xFFFFC20E),
+        foregroundColor: Colors.black,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.dataset),
+            tooltip: 'Seed Data Testing',
+            onPressed: _showSeedDataDialog,
+          ),
+        ],
+      ),
+      body: Consumer<OrderProvider>(
+        builder: (context, orderProvider, child) {
         if (orderProvider.isLoading) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -39,15 +72,38 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('Gagal memuat statistik'),
+                const Icon(Icons.info_outline, size: 64, color: Colors.grey),
+                const SizedBox(height: 16),
+                const Text('Gagal memuat statistik'),
+                const SizedBox(height: 8),
                 ElevatedButton(
                   onPressed: () => orderProvider.loadStatistics(),
                   child: const Text('Coba Lagi'),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _showSeedDataDialog,
+                  icon: const Icon(Icons.dataset),
+                  label: const Text('Seed Data Testing'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFFFC20E),
+                    side: const BorderSide(color: Color(0xFFFFC20E)),
+                  ),
                 ),
               ],
             ),
           );
         }
+
+        // Check if all stats are 0 - with safe access
+        final dailySales = (stats['daily'] as Map?)?['sales'] ?? 0;
+        final weeklySales = (stats['weekly'] as Map?)?['sales'] ?? 0;
+        final monthlySales = (stats['monthly'] as Map?)?['sales'] ?? 0;
+        final totalSales = (stats['total'] as Map?)?['sales'] ?? 0;
+        
+        final isAllZero = dailySales == 0 && weeklySales == 0 && monthlySales == 0 && totalSales == 0;
+        
+        print('🔍 Stats check: daily=$dailySales, weekly=$weeklySales, monthly=$monthlySales, total=$totalSales, isAllZero=$isAllZero');
 
         return RefreshIndicator(
           onRefresh: () => orderProvider.loadStatistics(),
@@ -56,6 +112,45 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Seed data button if stats are 0
+                if (isAllZero)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.orange),
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.info_outline, color: Colors.orange, size: 32),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Belum ada data statistik',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Gunakan data testing untuk melihat contoh statistik',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          onPressed: _showSeedDataDialog,
+                          icon: const Icon(Icons.dataset),
+                          label: const Text('Seed Data Testing'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFFC20E),
+                            foregroundColor: Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                
                 // Date range filter
                 _buildDateRangeFilter(orderProvider),
                 const SizedBox(height: 16),
@@ -71,6 +166,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           ),
         );
       },
+      ),
     );
   }
 
@@ -366,6 +462,56 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               ],
             ),
             const SizedBox(height: 12),
+            
+            // Quick select buttons
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _buildQuickSelectChip('7 Hari', () {
+                  final end = DateTime.now();
+                  final start = end.subtract(const Duration(days: 6));
+                  provider.setStatsDateRange(start, end);
+                }),
+                _buildQuickSelectChip('30 Hari', () {
+                  final end = DateTime.now();
+                  final start = end.subtract(const Duration(days: 29));
+                  provider.setStatsDateRange(start, end);
+                }),
+                _buildQuickSelectChip('Bulan Ini', () {
+                  final now = DateTime.now();
+                  final start = DateTime(now.year, now.month, 1);
+                  final end = now;
+                  provider.setStatsDateRange(start, end);
+                }),
+                _buildQuickSelectChip('Bulan Lalu', () {
+                  final now = DateTime.now();
+                  final lastMonth = DateTime(now.year, now.month - 1, 1);
+                  final lastMonthEnd = DateTime(now.year, now.month, 0);
+                  provider.setStatsDateRange(lastMonth, lastMonthEnd);
+                }),
+                _buildQuickSelectChip('Tahun Ini', () {
+                  final now = DateTime.now();
+                  final start = DateTime(now.year, 1, 1);
+                  final end = now;
+                  provider.setStatsDateRange(start, end);
+                }),
+                _buildQuickSelectChip('2018', () {
+                  provider.setStatsDateRange(DateTime(2018, 1, 1), DateTime(2018, 12, 31));
+                }),
+                _buildQuickSelectChip('2017', () {
+                  provider.setStatsDateRange(DateTime(2017, 1, 1), DateTime(2017, 12, 31));
+                }),
+                _buildQuickSelectChip('2016', () {
+                  provider.setStatsDateRange(DateTime(2016, 1, 1), DateTime(2016, 12, 31));
+                }),
+                _buildQuickSelectChip('2015', () {
+                  provider.setStatsDateRange(DateTime(2015, 1, 1), DateTime(2015, 12, 31));
+                }),
+              ],
+            ),
+            const SizedBox(height: 12),
+            
             if (hasDateRange)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -396,7 +542,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               child: ElevatedButton.icon(
                 onPressed: () => _showDateRangePicker(context, provider),
                 icon: const Icon(Icons.calendar_month),
-                label: const Text('Pilih Rentang Tanggal'),
+                label: const Text('Pilih Rentang Custom'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFFFC20E),
                   foregroundColor: Colors.black,
@@ -410,23 +556,52 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     );
   }
 
+  Widget _buildQuickSelectChip(String label, VoidCallback onPressed) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey[400]!),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 12),
+        ),
+      ),
+    );
+  }
+
   Future<void> _showDateRangePicker(BuildContext context, OrderProvider provider) async {
     final DateTimeRange? picked = await showDateRangePicker(
       context: context,
-      firstDate: DateTime(2020),
+      firstDate: DateTime(2015, 1, 1), // Support data dari 2015
       lastDate: DateTime.now(),
+      currentDate: DateTime.now(), // Untuk navigasi hari ini
       initialDateRange: provider.statsStartDate != null && provider.statsEndDate != null
           ? DateTimeRange(
               start: provider.statsStartDate!,
               end: provider.statsEndDate!,
             )
           : null,
+      initialEntryMode: DatePickerEntryMode.calendarOnly, // Fokus ke kalender
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
               primary: Color(0xFFFFC20E),
               onPrimary: Colors.black,
+              surface: Colors.white,
+              onSurface: Colors.black,
+            ),
+            dialogBackgroundColor: Colors.white,
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFFFFC20E),
+              ),
             ),
           ),
           child: child!,

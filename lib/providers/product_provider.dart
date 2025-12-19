@@ -7,6 +7,7 @@ class ProductProvider with ChangeNotifier {
 
   List<ProductModel> _products = [];
   List<ProductModel> _filteredProducts = [];
+  List<ProductModel> _lowStockProducts = [];
   bool _isLoading = false;
   String? _error;
   String? _selectedCategory;
@@ -15,6 +16,7 @@ class ProductProvider with ChangeNotifier {
   List<ProductModel> get products => _filteredProducts.isEmpty && _searchQuery.isEmpty && _selectedCategory == null
       ? _products
       : _filteredProducts;
+  List<ProductModel> get lowStockProducts => _lowStockProducts;
   bool get isLoading => _isLoading;
   String? get error => _error;
   String? get selectedCategory => _selectedCategory;
@@ -136,5 +138,23 @@ class ProductProvider with ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  // Low stock functions
+  Future<void> loadLowStockProducts() async {
+    try {
+      _lowStockProducts = await _productService.getLowStockProducts();
+      notifyListeners();
+    } catch (e) {
+      print('Error loading low stock products: $e');
+    }
+  }
+
+  Future<void> checkAndNotifyLowStock() async {
+    try {
+      await _productService.checkAndNotifyLowStock();
+    } catch (e) {
+      print('Error checking low stock: $e');
+    }
   }
 }

@@ -3,10 +3,12 @@ import '../models/order_model.dart';
 import '../models/cart_model.dart';
 import '../models/user_model.dart';
 import 'email_service.dart';
+import 'product_service.dart';
 
 class OrderService {
   final SupabaseClient _supabase = Supabase.instance.client;
   final EmailService _emailService = EmailService();
+  final ProductService _productService = ProductService();
 
   Future<OrderModel> createOrder({
     required UserModel user,
@@ -55,8 +57,11 @@ class OrderService {
       // Get complete order with items
       final order = await getOrderById(orderId);
 
+      // Collect product IDs for stock check
+      final productIds = cartItems.map((item) => item.product.id).toList();
+
       // Send email notifications (async, don't wait)
-      _sendOrderNotifications(user, order);
+      _sendOrderNotifications(user, order, productIds);
 
       return order;
     } catch (e) {
@@ -65,13 +70,16 @@ class OrderService {
   }
 
   /// Send order notifications to user and admin
-  Future<void> _sendOrderNotifications(UserModel user, OrderModel order) async {
+  Future<void> _sendOrderNotifications(UserModel user, OrderModel order, List<String> productIds) async {
     try {
       // Send order confirmation to user
       await _emailService.sendOrderConfirmation(user: user, order: order);
       
       // Notify admin about new order
       await _emailService.notifyAdminNewOrder(order: order);
+      
+      // Check if any ordered products now have low stock and notify admin
+      await _productService.checkOrderedProductsStock(productIds);
     } catch (e) {
       print('Error sending order notifications: $e');
     }

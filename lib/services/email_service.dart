@@ -160,4 +160,36 @@ class EmailService {
       return false;
     }
   }
+
+  /// Notify admin about low stock products
+  Future<bool> notifyLowStock({
+    required List<Map<String, dynamic>> products,
+  }) async {
+    try {
+      if (products.isEmpty) {
+        print('No low stock products to notify');
+        return true;
+      }
+
+      print('Sending low stock notification for ${products.length} products');
+
+      final response = await _postToEdgeFunction('notify-low-stock', {
+        'products': products,
+      });
+
+      print('Low stock notification response status: ${response.statusCode}');
+      print('Low stock notification response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        print('Low stock notification sent successfully');
+        return true;
+      } else {
+        print('Failed to send low stock notification: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('Error sending low stock notification: $e');
+      return false;
+    }
+  }
 }
