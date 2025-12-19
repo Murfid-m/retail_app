@@ -55,9 +55,9 @@ class ProductDetailScreen extends StatelessWidget {
                   // Category chip
                   Chip(
                     label: Text(product.category),
-                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                    labelStyle: TextStyle(
-                      color: Theme.of(context).primaryColor,
+                    labelStyle: const TextStyle(
+                      color: Color(0xFFFFC20E),
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -75,10 +75,10 @@ class ProductDetailScreen extends StatelessWidget {
                   // Price
                   Text(
                     'Rp ${_formatPrice(product.price)}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Theme.of(context).primaryColor,
+                      color: Color(0xFF0080C6),
                     ),
                   ),
                   const SizedBox(height: 16),

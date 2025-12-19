@@ -12,12 +12,28 @@ class OrderManagementScreen extends StatefulWidget {
 }
 
 class _OrderManagementScreenState extends State<OrderManagementScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  final List<String> _statusOptions = [
+    'Semua Status',
+    'pending',
+    'processing', 
+    'shipped',
+    'delivered',
+    'cancelled'
+  ];
+
   @override
   void initState() {
     super.initState();
     Future.microtask(() {
       Provider.of<OrderProvider>(context, listen: false).loadAllOrders();
     });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   String _formatPrice(double price) {
@@ -29,6 +45,146 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     return DateFormat('dd MMM yyyy, HH:mm').format(date);
   }
 
+  Widget _buildSearchAndFilter(OrderProvider orderProvider) {
+    return Column(
+      children: [
+        // Search Bar
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Cari pesanan...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        orderProvider.searchOrders('');
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+              fillColor: Colors.grey[100],
+            ),
+            onChanged: (value) {
+              orderProvider.searchOrders(value);
+            },
+          ),
+        ),
+
+        // Status Filter
+        SizedBox(
+          height: 50,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: [
+              ..._statusOptions.map((status) {
+                return _buildStatusChip(status, orderProvider);
+              }).toList(),
+              const SizedBox(width: 8),
+              _buildDateRangeChip(orderProvider),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusChip(String status, OrderProvider orderProvider) {
+    final isSelected = (status == 'Semua Status' && orderProvider.selectedStatus == null) ||
+        orderProvider.selectedStatus == status;
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        label: Text(_getStatusLabel(status)),
+        selected: isSelected,
+        onSelected: (selected) {
+          if (status == 'Semua Status') {
+            orderProvider.filterByStatus(null);
+          } else {
+            orderProvider.filterByStatus(status);
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildDateRangeChip(OrderProvider orderProvider) {
+    final hasDateFilter = orderProvider.startDate != null || orderProvider.endDate != null;
+    
+    return FilterChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.date_range, size: 16),
+          const SizedBox(width: 4),
+          Text(hasDateFilter ? 'Tanggal Dipilih' : 'Filter Tanggal'),
+        ],
+      ),
+      selected: hasDateFilter,
+      onSelected: (selected) {
+        if (selected) {
+          _showDateRangePicker(orderProvider);
+        } else {
+          orderProvider.filterByDateRange(null, null);
+        }
+      },
+    );
+  }
+
+  String _getStatusLabel(String status) {
+    switch (status) {
+      case 'Semua Status':
+        return 'Semua Status';
+      case 'pending':
+        return 'Menunggu';
+      case 'processing':
+        return 'Diproses';
+      case 'shipped':
+        return 'Dikirim';
+      case 'delivered':
+        return 'Terkirim';
+      case 'cancelled':
+        return 'Dibatalkan';
+      default:
+        return status;
+    }
+  }
+
+
+
+  Future<void> _showDateRangePicker(OrderProvider orderProvider) async {
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 30)),
+      initialDateRange: orderProvider.startDate != null && orderProvider.endDate != null
+          ? DateTimeRange(start: orderProvider.startDate!, end: orderProvider.endDate!)
+          : null,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: Colors.blue,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      orderProvider.filterByDateRange(picked.start, picked.end);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<OrderProvider>(
@@ -37,38 +193,49 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
           return const Center(child: CircularProgressIndicator());
         }
 
-        if (orderProvider.orders.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.receipt_long_outlined,
-                  size: 100,
-                  color: Colors.grey[300],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Belum ada pesanan',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
+        final orders = orderProvider.orders;
 
-        return RefreshIndicator(
-          onRefresh: () => orderProvider.loadAllOrders(),
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: orderProvider.orders.length,
-            itemBuilder: (context, index) {
-              return _buildOrderCard(orderProvider.orders[index], orderProvider);
-            },
-          ),
+        return Column(
+          children: [
+            _buildSearchAndFilter(orderProvider),
+            Expanded(
+              child: orders.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.receipt_long_outlined,
+                            size: 100,
+                            color: Colors.grey[300],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            orderProvider.searchQuery.isNotEmpty || orderProvider.selectedStatus != null || 
+                            orderProvider.startDate != null || orderProvider.endDate != null
+                                ? 'Tidak ada pesanan ditemukan'
+                                : 'Belum ada pesanan',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey[600],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: () => orderProvider.loadAllOrders(),
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: orders.length,
+                        itemBuilder: (context, index) {
+                          return _buildOrderCard(orders[index], orderProvider);
+                        },
+                      ),
+                    ),
+            ),
+          ],
         );
       },
     );
@@ -106,7 +273,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                 ],
               ),
             ),
-            _buildStatusChip(order.status),
+            _buildOrderStatusChip(order.status),
           ],
         ),
         subtitle: Padding(
@@ -175,6 +342,9 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                                 ? Image.network(
                                     item.imageUrl,
                                     fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return const Icon(Icons.image_not_supported, size: 20, color: Colors.grey);
+                                    },
                                   )
                                 : const Icon(Icons.image, size: 20),
                           ),
@@ -281,7 +451,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     );
   }
 
-  Widget _buildStatusChip(String status) {
+  Widget _buildOrderStatusChip(String status) {
     Color color;
     String text = _getStatusText(status);
 

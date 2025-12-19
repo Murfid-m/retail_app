@@ -10,18 +10,31 @@ class OrderProvider with ChangeNotifier {
   final OrderService _orderService = OrderService();
 
   List<OrderModel> _orders = [];
+  List<OrderModel> _filteredOrders = [];
   List<OrderModel> _userOrders = [];
   bool _isLoading = false;
   String? _error;
   Map<String, dynamic>? _statistics;
   List<Map<String, dynamic>> _chartData = [];
+  
+  // Filter properties
+  String? _selectedStatus;
+  String _searchQuery = '';
+  DateTime? _startDate;
+  DateTime? _endDate;
 
-  List<OrderModel> get orders => _orders;
+  List<OrderModel> get orders => _filteredOrders.isEmpty && _searchQuery.isEmpty && _selectedStatus == null && _startDate == null && _endDate == null
+      ? _orders
+      : _filteredOrders;
   List<OrderModel> get userOrders => _userOrders;
   bool get isLoading => _isLoading;
   String? get error => _error;
   Map<String, dynamic>? get statistics => _statistics;
   List<Map<String, dynamic>> get chartData => _chartData;
+  String? get selectedStatus => _selectedStatus;
+  String get searchQuery => _searchQuery;
+  DateTime? get startDate => _startDate;
+  DateTime? get endDate => _endDate;
 
   Future<OrderModel?> createOrder({
     required UserModel user,
@@ -74,6 +87,7 @@ class OrderProvider with ChangeNotifier {
 
     try {
       _orders = await _orderService.getAllOrders();
+      _applyFilters();
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -116,10 +130,25 @@ Future<void> loadStatistics() async {
   notifyListeners();
 
   try {
+<<<<<<< HEAD
     _statistics = await _orderService.getSalesStatistics();
     _chartData = await _orderService.getDailySalesForChart(7);
     _isLoading = false;
     notifyListeners();
+=======
+    final statisticsService = StatisticsService();
+    final data = await statisticsService.loadStatistics();
+
+    _statistics = data;
+
+    // Ambil last_7_days untuk chart
+    _chartData = (data['last_7_days'] as List)
+        .map<Map<String, dynamic>>((e) => {
+              'date': e['date'],
+              'sales': (e['sales'] as num).toDouble(),
+            })
+        .toList();
+>>>>>>> 878bf85fb47f9b9651b9855eb86a538a5ca64b9b
   } catch (e) {
     _error = e.toString();
     _isLoading = false;
@@ -131,6 +160,67 @@ Future<void> loadStatistics() async {
 
   void clearError() {
     _error = null;
+    notifyListeners();
+  }
+
+  // Filtering methods
+  void filterByStatus(String? status) {
+    _selectedStatus = status;
+    _applyFilters();
+    notifyListeners();
+  }
+
+  void searchOrders(String query) {
+    _searchQuery = query;
+    _applyFilters();
+    notifyListeners();
+  }
+
+  void filterByDateRange(DateTime? startDate, DateTime? endDate) {
+    _startDate = startDate;
+    _endDate = endDate;
+    _applyFilters();
+    notifyListeners();
+  }
+
+  void _applyFilters() {
+    _filteredOrders = _orders;
+
+    if (_selectedStatus != null && _selectedStatus!.isNotEmpty) {
+      _filteredOrders = _filteredOrders
+          .where((o) => o.status.toLowerCase() == _selectedStatus!.toLowerCase())
+          .toList();
+    }
+
+    if (_searchQuery.isNotEmpty) {
+      _filteredOrders = _filteredOrders
+          .where((o) => 
+              o.userName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              o.userEmail.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              o.userPhone.contains(_searchQuery) ||
+              o.id.toLowerCase().contains(_searchQuery.toLowerCase()))
+          .toList();
+    }
+
+    if (_startDate != null) {
+      _filteredOrders = _filteredOrders
+          .where((o) => o.createdAt.isAfter(_startDate!) || o.createdAt.isAtSameMomentAs(_startDate!))
+          .toList();
+    }
+
+    if (_endDate != null) {
+      _filteredOrders = _filteredOrders
+          .where((o) => o.createdAt.isBefore(_endDate!.add(const Duration(days: 1))))
+          .toList();
+    }
+  }
+
+  void clearFilters() {
+    _selectedStatus = null;
+    _searchQuery = '';
+    _startDate = null;
+    _endDate = null;
+    _filteredOrders = [];
     notifyListeners();
   }
 }
