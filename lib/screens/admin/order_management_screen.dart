@@ -274,9 +274,6 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                           : Colors.grey[600],
                       fontSize: 14,
                     ),
-======
-                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
->>>>>>> 0ad7645a95aa8e3c6e058a9247b94314647cf23d=
                   ),
                 ],
               ),

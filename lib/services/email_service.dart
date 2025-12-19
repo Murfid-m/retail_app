@@ -1,4 +1,3 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/order_model.dart';
@@ -6,8 +5,6 @@ import '../models/user_model.dart';
 import '../config/supabase_config.dart';
 
 class EmailService {
-  final SupabaseClient _supabase = Supabase.instance.client;
-
   /// Helper method for HTTP POST to Edge Functions
   Future<http.Response> _postToEdgeFunction(String functionName, Map<String, dynamic> body) async {
     final url = Uri.parse(
