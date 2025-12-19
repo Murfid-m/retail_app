@@ -73,7 +73,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Text(
                           '${cart.totalItems}',
                           style: const TextStyle(
-                            color: Colors.white,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
