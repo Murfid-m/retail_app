@@ -72,13 +72,16 @@ class OrderModel {
       userPhone: json['user_phone'] ?? '',
       userEmail: json['user_email'] ?? '',
       shippingAddress: json['shipping_address'] ?? '',
-      items: (json['order_items'] as List<dynamic>?)
+      items:
+          (json['order_items'] as List<dynamic>?)
               ?.map((item) => OrderItem.fromJson(item))
               .toList() ??
           [],
       totalAmount: (json['total_amount'] ?? 0).toDouble(),
       status: json['status'] ?? 'pending',
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+        json['created_at'] ?? DateTime.now().toIso8601String(),
+      ),
     );
   }
 
@@ -102,5 +105,11 @@ class OrderStatus {
   static const String delivered = 'delivered';
   static const String cancelled = 'cancelled';
 
-  static List<String> get all => [pending, processing, shipped, delivered, cancelled];
+  static List<String> get all => [
+    pending,
+    processing,
+    shipped,
+    delivered,
+    cancelled,
+  ];
 }

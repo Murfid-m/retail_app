@@ -13,7 +13,10 @@ class OrderService {
   }) async {
     try {
       // Calculate total amount
-      final totalAmount = cartItems.fold(0.0, (sum, item) => sum + item.totalPrice);
+      final totalAmount = cartItems.fold(
+        0.0,
+        (sum, item) => sum + item.totalPrice,
+      );
 
       // Create order
       final orderResponse = await _supabase
@@ -44,10 +47,10 @@ class OrderService {
         });
 
         // Update product stock
-        await _supabase.rpc('decrement_stock', params: {
-          'product_id': item.product.id,
-          'quantity': item.quantity,
-        });
+        await _supabase.rpc(
+          'decrement_stock',
+          params: {'product_id': item.product.id, 'quantity': item.quantity},
+        );
       }
 
       // Get complete order with items
@@ -128,8 +131,10 @@ class OrderService {
           .gte('created_at', today.toIso8601String())
           .neq('status', OrderStatus.cancelled);
 
-      final dailySales = (dailyResponse as List)
-          .fold(0.0, (sum, order) => sum + (order['total_amount'] ?? 0).toDouble());
+      final dailySales = (dailyResponse as List).fold(
+        0.0,
+        (sum, order) => sum + (order['total_amount'] ?? 0).toDouble(),
+      );
 
       // Weekly sales
       final weeklyResponse = await _supabase
@@ -138,8 +143,10 @@ class OrderService {
           .gte('created_at', weekStart.toIso8601String())
           .neq('status', OrderStatus.cancelled);
 
-      final weeklySales = (weeklyResponse as List)
-          .fold(0.0, (sum, order) => sum + (order['total_amount'] ?? 0).toDouble());
+      final weeklySales = (weeklyResponse as List).fold(
+        0.0,
+        (sum, order) => sum + (order['total_amount'] ?? 0).toDouble(),
+      );
 
       // Monthly sales
       final monthlyResponse = await _supabase
@@ -148,8 +155,10 @@ class OrderService {
           .gte('created_at', monthStart.toIso8601String())
           .neq('status', OrderStatus.cancelled);
 
-      final monthlySales = (monthlyResponse as List)
-          .fold(0.0, (sum, order) => sum + (order['total_amount'] ?? 0).toDouble());
+      final monthlySales = (monthlyResponse as List).fold(
+        0.0,
+        (sum, order) => sum + (order['total_amount'] ?? 0).toDouble(),
+      );
 
       // Total sales
       final totalResponse = await _supabase
@@ -157,8 +166,10 @@ class OrderService {
           .select('total_amount')
           .neq('status', OrderStatus.cancelled);
 
-      final totalSales = (totalResponse as List)
-          .fold(0.0, (sum, order) => sum + (order['total_amount'] ?? 0).toDouble());
+      final totalSales = (totalResponse as List).fold(
+        0.0,
+        (sum, order) => sum + (order['total_amount'] ?? 0).toDouble(),
+      );
 
       // Order counts
       final dailyCount = (dailyResponse as List).length;
@@ -183,7 +194,11 @@ class OrderService {
       final now = DateTime.now();
 
       for (int i = days - 1; i >= 0; i--) {
-        final date = DateTime(now.year, now.month, now.day).subtract(Duration(days: i));
+        final date = DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ).subtract(Duration(days: i));
         final nextDate = date.add(const Duration(days: 1));
 
         final response = await _supabase
@@ -193,13 +208,12 @@ class OrderService {
             .lt('created_at', nextDate.toIso8601String())
             .neq('status', OrderStatus.cancelled);
 
-        final sales = (response as List)
-            .fold(0.0, (sum, order) => sum + (order['total_amount'] ?? 0).toDouble());
+        final sales = (response as List).fold(
+          0.0,
+          (sum, order) => sum + (order['total_amount'] ?? 0).toDouble(),
+        );
 
-        salesData.add({
-          'date': date,
-          'sales': sales,
-        });
+        salesData.add({'date': date, 'sales': sales});
       }
 
       return salesData;

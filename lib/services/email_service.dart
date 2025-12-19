@@ -13,10 +13,7 @@ class EmailService {
     try {
       final response = await _supabase.functions.invoke(
         'send-welcome-email',
-        body: {
-          'email': email,
-          'name': name,
-        },
+        body: {'email': email, 'name': name},
       );
 
       if (response.status == 200) {
@@ -38,11 +35,15 @@ class EmailService {
     required OrderModel order,
   }) async {
     try {
-      final items = order.items.map((item) => {
-        'productName': item.productName,
-        'price': item.price,
-        'quantity': item.quantity,
-      }).toList();
+      final items = order.items
+          .map(
+            (item) => {
+              'productName': item.productName,
+              'price': item.price,
+              'quantity': item.quantity,
+            },
+          )
+          .toList();
 
       final response = await _supabase.functions.invoke(
         'send-order-confirmation',

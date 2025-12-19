@@ -2,11 +2,17 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_model.dart';
 
 class AuthService {
-  final SupabaseClient _supabase = Supabase.instance.client;
+  SupabaseClient? _supabase;
 
-  User? get currentUser => _supabase.auth.currentUser;
-  
-  Stream<AuthState> get authStateChanges => _supabase.auth.onAuthStateChange;
+  /// Optional injection for tests. If [client] is not provided, the
+  /// real Supabase client will be resolved lazily when first needed.
+  AuthService([SupabaseClient? client]) : _supabase = client;
+
+  SupabaseClient get _client => _supabase ??= Supabase.instance.client;
+
+  User? get currentUser => _client.auth.currentUser;
+
+  Stream<AuthState> get authStateChanges => _client.auth.onAuthStateChange;
 
   /// Sign up - returns UserModel if successful (no email confirmation needed)
   Future<UserModel?> signUp({
@@ -17,20 +23,17 @@ class AuthService {
     required String address,
   }) async {
     try {
-      final response = await _supabase.auth.signUp(
+      final client = _client;
+      final response = await client.auth.signUp(
         email: email,
         password: password,
-        data: {
-          'name': name,
-          'phone': phone,
-          'address': address,
-        },
+        data: {'name': name, 'phone': phone, 'address': address},
       );
 
       if (response.user != null) {
         // Create user profile in database using upsert to avoid conflicts
         try {
-          await _supabase.from('users').upsert({
+          await client.from('users').upsert({
             'id': response.user!.id,
             'email': email,
             'name': name,
@@ -39,7 +42,7 @@ class AuthService {
             'is_admin': false,
             'created_at': DateTime.now().toIso8601String(),
           }, onConflict: 'id');
-          
+
           print('User profile created successfully for ${response.user!.id}');
         } catch (dbError) {
           print('Database error creating profile: $dbError');
@@ -69,7 +72,8 @@ class AuthService {
     required String password,
   }) async {
     try {
-      final response = await _supabase.auth.signInWithPassword(
+      final client = _client;
+      final response = await client.auth.signInWithPassword(
         email: email,
         password: password,
       );
@@ -80,15 +84,15 @@ class AuthService {
         if (profile != null) {
           return profile;
         }
-        
+
         // If no profile in DB, create one from user metadata
         final metadata = response.user!.userMetadata;
         final name = metadata?['name'] ?? email.split('@').first;
         final phone = metadata?['phone'] ?? '';
         final address = metadata?['address'] ?? '';
-        
+
         try {
-          await _supabase.from('users').insert({
+          await client.from('users').insert({
             'id': response.user!.id,
             'email': email,
             'name': name,
@@ -97,7 +101,7 @@ class AuthService {
             'is_admin': false,
             'created_at': DateTime.now().toIso8601String(),
           });
-          
+
           // Fetch again to get the proper data
           return await getUserProfile(response.user!.id);
         } catch (e) {
@@ -123,12 +127,12 @@ class AuthService {
   }
 
   Future<void> signOut() async {
-    await _supabase.auth.signOut();
+    await _client.auth.signOut();
   }
 
   Future<UserModel?> getUserProfile(String userId) async {
     try {
-      final response = await _supabase
+      final response = await _client
           .from('users')
           .select()
           .eq('id', userId)
@@ -145,16 +149,19 @@ class AuthService {
   }
 
   Future<void> updateUserProfile(UserModel user) async {
-    await _supabase.from('users').update({
-      'name': user.name,
-      'phone': user.phone,
-      'address': user.address,
-    }).eq('id', user.id);
+    await _client
+        .from('users')
+        .update({
+          'name': user.name,
+          'phone': user.phone,
+          'address': user.address,
+        })
+        .eq('id', user.id);
   }
 
   Future<bool> isAdmin(String userId) async {
     try {
-      final response = await _supabase
+      final response = await _client
           .from('users')
           .select('is_admin')
           .eq('id', userId)

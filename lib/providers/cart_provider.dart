@@ -11,16 +11,20 @@ class CartProvider with ChangeNotifier {
   double get totalPrice => _items.fold(0, (sum, item) => sum + item.totalPrice);
 
   void addToCart(ProductModel product) {
-    final existingIndex = _items.indexWhere((item) => item.product.id == product.id);
-    
+    final existingIndex = _items.indexWhere(
+      (item) => item.product.id == product.id,
+    );
+
     if (existingIndex != -1) {
       _items[existingIndex].quantity++;
     } else {
-      _items.add(CartItem(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        product: product,
-        quantity: 1,
-      ));
+      _items.add(
+        CartItem(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          product: product,
+          quantity: 1,
+        ),
+      );
     }
     notifyListeners();
   }
@@ -74,16 +78,20 @@ class CartProvider with ChangeNotifier {
   int getQuantity(String productId) {
     final item = _items.firstWhere(
       (item) => item.product.id == productId,
-      orElse: () => CartItem(id: '', product: ProductModel(
+      orElse: () => CartItem(
         id: '',
-        name: '',
-        description: '',
-        price: 0,
-        category: '',
-        imageUrl: '',
-        stock: 0,
-        createdAt: DateTime.now(),
-      ), quantity: 0),
+        product: ProductModel(
+          id: '',
+          name: '',
+          description: '',
+          price: 0,
+          category: '',
+          imageUrl: '',
+          stock: 0,
+          createdAt: DateTime.now(),
+        ),
+        quantity: 0,
+      ),
     );
     return item.quantity;
   }

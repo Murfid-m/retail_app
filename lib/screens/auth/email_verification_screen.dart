@@ -16,7 +16,8 @@ class EmailVerificationScreen extends StatefulWidget {
   });
 
   @override
-  State<EmailVerificationScreen> createState() => _EmailVerificationScreenState();
+  State<EmailVerificationScreen> createState() =>
+      _EmailVerificationScreenState();
 }
 
 class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
@@ -44,7 +45,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         if (user.isAdmin) {
           Navigator.pushAndRemoveUntil(
             context,
-            MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
+            MaterialPageRoute(
+              builder: (context) => const AdminDashboardScreen(),
+            ),
             (route) => false,
           );
         } else {
@@ -59,7 +62,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       setState(() {
         _isError = true;
         if (e.toString().contains('belum dikonfirmasi')) {
-          _message = 'Email belum dikonfirmasi. Silakan cek inbox email Anda dan klik link konfirmasi.';
+          _message =
+              'Email belum dikonfirmasi. Silakan cek inbox email Anda dan klik link konfirmasi.';
         } else {
           _message = e.toString().replaceAll('Exception: ', '');
         }
@@ -84,7 +88,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         type: OtpType.signup,
         email: widget.email,
       );
-      
+
       setState(() {
         _isError = false;
         _message = 'Email konfirmasi telah dikirim ulang!';
@@ -131,8 +135,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 Text(
                   'Verifikasi Email Anda',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
@@ -140,9 +144,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 // Description
                 Text(
                   'Kami telah mengirim link konfirmasi ke:',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Colors.grey[600],
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
@@ -160,9 +164,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                   child: Text(
                     widget.email,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.indigo,
-                        ),
+                      fontWeight: FontWeight.bold,
+                      color: Colors.indigo,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -186,8 +190,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                       Text(
                         'Silakan buka email Anda dan klik link "Confirm your mail" untuk mengaktifkan akun. Setelah itu, tekan tombol "Cek Status Konfirmasi" di bawah.',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.amber[800],
-                            ),
+                          color: Colors.amber[800],
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -200,16 +204,22 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: _isError ? Colors.red.withOpacity(0.1) : Colors.green.withOpacity(0.1),
+                      color: _isError
+                          ? Colors.red.withOpacity(0.1)
+                          : Colors.green.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: _isError ? Colors.red.withOpacity(0.3) : Colors.green.withOpacity(0.3),
+                        color: _isError
+                            ? Colors.red.withOpacity(0.3)
+                            : Colors.green.withOpacity(0.3),
                       ),
                     ),
                     child: Row(
                       children: [
                         Icon(
-                          _isError ? Icons.error_outline : Icons.check_circle_outline,
+                          _isError
+                              ? Icons.error_outline
+                              : Icons.check_circle_outline,
                           color: _isError ? Colors.red : Colors.green,
                           size: 20,
                         ),
@@ -218,7 +228,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                           child: Text(
                             _message!,
                             style: TextStyle(
-                              color: _isError ? Colors.red[800] : Colors.green[800],
+                              color: _isError
+                                  ? Colors.red[800]
+                                  : Colors.green[800],
                               fontSize: 13,
                             ),
                           ),
@@ -241,12 +253,16 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                       Text(
                         'Tips:',
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 8),
-                      _buildTip('• Cek folder Spam atau Junk jika tidak menemukan email'),
-                      _buildTip('• Email dikirim dari noreply@enaknih-resto.me'),
+                      _buildTip(
+                        '• Cek folder Spam atau Junk jika tidak menemukan email',
+                      ),
+                      _buildTip(
+                        '• Email dikirim dari noreply@enaknih-resto.me',
+                      ),
                       _buildTip('• Link konfirmasi berlaku selama 24 jam'),
                     ],
                   ),
@@ -333,10 +349,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Text(
         text,
-        style: TextStyle(
-          color: Colors.grey[600],
-          fontSize: 13,
-        ),
+        style: TextStyle(color: Colors.grey[600], fontSize: 13),
       ),
     );
   }

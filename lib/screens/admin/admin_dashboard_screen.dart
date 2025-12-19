@@ -73,9 +73,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           padding: EdgeInsets.zero,
           children: [
             UserAccountsDrawerHeader(
-              decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor,
-              ),
+              decoration: BoxDecoration(color: Theme.of(context).primaryColor),
               accountName: Text(user?.name ?? 'Admin'),
               accountEmail: Text(user?.email ?? ''),
               currentAccountPicture: CircleAvatar(
@@ -127,7 +125,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               builder: (context, themeProvider, child) {
                 return SwitchListTile(
                   secondary: Icon(
-                    themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                    themeProvider.isDarkMode
+                        ? Icons.dark_mode
+                        : Icons.light_mode,
                   ),
                   title: const Text('Mode Gelap'),
                   value: themeProvider.isDarkMode,
@@ -146,7 +146,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 if (mounted) {
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const LoginScreen(),
+                    ),
                   );
                 }
               },

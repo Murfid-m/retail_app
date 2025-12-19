@@ -21,8 +21,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   }
 
   String _formatPrice(double price) {
-    return price.toStringAsFixed(0).replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+    return price
+        .toStringAsFixed(0)
+        .replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        );
   }
 
   @override
@@ -132,9 +136,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     IconData icon,
   ) {
     return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -148,37 +150,24 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     color: color.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
-                    icon,
-                    color: color,
-                    size: 20,
-                  ),
+                  child: Icon(icon, color: color, size: 20),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   title,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
               ],
             ),
             const SizedBox(height: 12),
             Text(
               value,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 4),
             Text(
               subtitle,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 12,
-              ),
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
             ),
           ],
         ),
@@ -189,14 +178,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   Widget _buildSalesChart(List<Map<String, dynamic>> chartData) {
     if (chartData.isEmpty) {
       return Card(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: const Padding(
           padding: EdgeInsets.all(16),
-          child: Center(
-            child: Text('Tidak ada data untuk ditampilkan'),
-          ),
+          child: Center(child: Text('Tidak ada data untuk ditampilkan')),
         ),
       );
     }
@@ -206,9 +191,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         .reduce((a, b) => a > b ? a : b);
 
     return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -216,10 +199,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           children: [
             const Text(
               'Penjualan 7 Hari Terakhir',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 24),
             SizedBox(

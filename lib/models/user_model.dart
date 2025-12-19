@@ -25,7 +25,9 @@ class UserModel {
       phone: json['phone'] ?? '',
       address: json['address'] ?? '',
       isAdmin: json['is_admin'] ?? false,
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+        json['created_at'] ?? DateTime.now().toIso8601String(),
+      ),
     );
   }
 
