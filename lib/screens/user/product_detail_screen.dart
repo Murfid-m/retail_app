@@ -9,16 +9,18 @@ class ProductDetailScreen extends StatelessWidget {
   const ProductDetailScreen({super.key, required this.product});
 
   String _formatPrice(double price) {
-    return price.toStringAsFixed(0).replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+    return price
+        .toStringAsFixed(0)
+        .replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detail Produk'),
-      ),
+      appBar: AppBar(title: const Text('Detail Produk')),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,11 +42,7 @@ class ProductDetailScreen extends StatelessWidget {
                         );
                       },
                     )
-                  : const Icon(
-                      Icons.image,
-                      size: 100,
-                      color: Colors.grey,
-                    ),
+                  : const Icon(Icons.image, size: 100, color: Colors.grey),
             ),
 
             Padding(
@@ -109,20 +107,14 @@ class ProductDetailScreen extends StatelessWidget {
                   // Description
                   const Text(
                     'Deskripsi',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     product.description.isNotEmpty
                         ? product.description
                         : 'Tidak ada deskripsi',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      height: 1.5,
-                    ),
+                    style: TextStyle(color: Colors.grey[600], height: 1.5),
                   ),
                 ],
               ),
@@ -228,9 +220,7 @@ class ProductDetailScreen extends StatelessWidget {
                   const Icon(Icons.shopping_cart_outlined),
                   const SizedBox(width: 8),
                   Text(
-                    product.stock > 0
-                        ? 'Tambah ke Keranjang'
-                        : 'Stok Habis',
+                    product.stock > 0 ? 'Tambah ke Keranjang' : 'Stok Habis',
                   ),
                 ],
               ),

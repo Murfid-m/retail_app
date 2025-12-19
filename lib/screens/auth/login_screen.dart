@@ -30,7 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      
+
       final success = await authProvider.signIn(
         email: _emailController.text.trim(),
         password: _passwordController.text,
@@ -40,7 +40,9 @@ class _LoginScreenState extends State<LoginScreen> {
         if (authProvider.isAdmin) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
+            MaterialPageRoute(
+              builder: (context) => const AdminDashboardScreen(),
+            ),
           );
         } else {
           Navigator.pushReplacement(
@@ -125,9 +127,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   Text(
                     'Masuk ke akun Anda',
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 40),
 
@@ -206,7 +208,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                 width: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
+<<<<<<< HEAD
                                   color: isDark ? Colors.black : Colors.white,
+=======
+>>>>>>> 0ad7645a95aa8e3c6e058a9247b94314647cf23d
                                 ),
                               )
                             : const Text(

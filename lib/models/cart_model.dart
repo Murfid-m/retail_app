@@ -5,11 +5,7 @@ class CartItem {
   final ProductModel product;
   int quantity;
 
-  CartItem({
-    required this.id,
-    required this.product,
-    this.quantity = 1,
-  });
+  CartItem({required this.id, required this.product, this.quantity = 1});
 
   double get totalPrice => product.price * quantity;
 
@@ -22,11 +18,7 @@ class CartItem {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'product_id': product.id,
-      'quantity': quantity,
-    };
+    return {'id': id, 'product_id': product.id, 'quantity': quantity};
   }
 }
 
@@ -35,11 +27,7 @@ class CartModel {
   final String oderId;
   final List<CartItem> items;
 
-  CartModel({
-    required this.id,
-    required this.oderId,
-    required this.items,
-  });
+  CartModel({required this.id, required this.oderId, required this.items});
 
   double get totalPrice => items.fold(0, (sum, item) => sum + item.totalPrice);
   int get totalItems => items.fold(0, (sum, item) => sum + item.quantity);

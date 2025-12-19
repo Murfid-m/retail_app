@@ -16,10 +16,10 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
   final List<String> _statusOptions = [
     'Semua Status',
     'pending',
-    'processing', 
+    'processing',
     'shipped',
     'delivered',
-    'cancelled'
+    'cancelled',
   ];
 
   @override
@@ -37,8 +37,12 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
   }
 
   String _formatPrice(double price) {
-    return price.toStringAsFixed(0).replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+    return price
+        .toStringAsFixed(0)
+        .replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        );
   }
 
   String _formatDate(DateTime date) {
@@ -96,7 +100,8 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
   }
 
   Widget _buildStatusChip(String status, OrderProvider orderProvider) {
-    final isSelected = (status == 'Semua Status' && orderProvider.selectedStatus == null) ||
+    final isSelected =
+        (status == 'Semua Status' && orderProvider.selectedStatus == null) ||
         orderProvider.selectedStatus == status;
 
     return Padding(
@@ -116,8 +121,9 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
   }
 
   Widget _buildDateRangeChip(OrderProvider orderProvider) {
-    final hasDateFilter = orderProvider.startDate != null || orderProvider.endDate != null;
-    
+    final hasDateFilter =
+        orderProvider.startDate != null || orderProvider.endDate != null;
+
     return FilterChip(
       label: Row(
         mainAxisSize: MainAxisSize.min,
@@ -157,22 +163,24 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     }
   }
 
-
-
   Future<void> _showDateRangePicker(OrderProvider orderProvider) async {
     final DateTimeRange? picked = await showDateRangePicker(
       context: context,
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now().add(const Duration(days: 30)),
-      initialDateRange: orderProvider.startDate != null && orderProvider.endDate != null
-          ? DateTimeRange(start: orderProvider.startDate!, end: orderProvider.endDate!)
+      initialDateRange:
+          orderProvider.startDate != null && orderProvider.endDate != null
+          ? DateTimeRange(
+              start: orderProvider.startDate!,
+              end: orderProvider.endDate!,
+            )
           : null,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: Colors.blue,
-            ),
+            colorScheme: Theme.of(
+              context,
+            ).colorScheme.copyWith(primary: Colors.blue),
           ),
           child: child!,
         );
@@ -210,8 +218,10 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            orderProvider.searchQuery.isNotEmpty || orderProvider.selectedStatus != null || 
-                            orderProvider.startDate != null || orderProvider.endDate != null
+                            orderProvider.searchQuery.isNotEmpty ||
+                                    orderProvider.selectedStatus != null ||
+                                    orderProvider.startDate != null ||
+                                    orderProvider.endDate != null
                                 ? 'Tidak ada pesanan ditemukan'
                                 : 'Belum ada pesanan',
                             style: TextStyle(
@@ -243,13 +253,9 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
   Widget _buildOrderCard(OrderModel order, OrderProvider orderProvider) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ExpansionTile(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         title: Row(
           children: [
             Expanded(
@@ -258,9 +264,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                 children: [
                   Text(
                     '#${order.id.substring(0, 8).toUpperCase()}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   Text(
                     order.userName,
@@ -270,6 +274,9 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                           : Colors.grey[600],
                       fontSize: 14,
                     ),
+======
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
+>>>>>>> 0ad7645a95aa8e3c6e058a9247b94314647cf23d=
                   ),
                 ],
               ),
@@ -284,10 +291,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
             children: [
               Text(
                 _formatDate(order.createdAt),
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
               ),
               Text(
                 'Rp ${_formatPrice(order.totalAmount)}',
@@ -308,89 +312,92 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Customer info
-                _buildInfoSection(
-                  'Informasi Pemesan',
-                  [
-                    _buildInfoRow('Nama', order.userName),
-                    _buildInfoRow('No. HP', order.userPhone),
-                    _buildInfoRow('Email', order.userEmail),
-                  ],
-                ),
+                _buildInfoSection('Informasi Pemesan', [
+                  _buildInfoRow('Nama', order.userName),
+                  _buildInfoRow('No. HP', order.userPhone),
+                  _buildInfoRow('Email', order.userEmail),
+                ]),
                 const SizedBox(height: 16),
 
                 // Shipping address
-                _buildInfoSection(
-                  'Alamat Pengiriman',
-                  [Text(order.shippingAddress)],
-                ),
+                _buildInfoSection('Alamat Pengiriman', [
+                  Text(order.shippingAddress),
+                ]),
                 const SizedBox(height: 16),
 
                 // Order items
                 _buildInfoSection(
                   'Produk',
-                  order.items.map((item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: item.imageUrl.isNotEmpty
-                                ? Image.network(
-                                    item.imageUrl,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return const Icon(Icons.image_not_supported, size: 20, color: Colors.grey);
-                                    },
-                                  )
-                                : const Icon(Icons.image, size: 20),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                  order.items
+                      .map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
                             children: [
-                              Text(
-                                item.productName,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[200],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: item.imageUrl.isNotEmpty
+                                      ? Image.network(
+                                          item.imageUrl,
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                                return const Icon(
+                                                  Icons.image_not_supported,
+                                                  size: 20,
+                                                  color: Colors.grey,
+                                                );
+                                              },
+                                        )
+                                      : const Icon(Icons.image, size: 20),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.productName,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    Text(
+                                      '${item.quantity}x Rp ${_formatPrice(item.price)}',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                               Text(
-                                '${item.quantity}x Rp ${_formatPrice(item.price)}',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 12,
+                                'Rp ${_formatPrice(item.totalPrice)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        Text(
-                          'Rp ${_formatPrice(item.totalPrice)}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )).toList(),
+                      )
+                      .toList(),
                 ),
                 const SizedBox(height: 16),
 
                 // Update status
                 const Text(
                   'Update Status',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Wrap(
@@ -420,12 +427,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         ...children,
       ],
@@ -440,15 +442,10 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         children: [
           SizedBox(
             width: 60,
-            child: Text(
-              label,
-              style: TextStyle(color: Colors.grey[600]),
-            ),
+            child: Text(label, style: TextStyle(color: Colors.grey[600])),
           ),
           const Text(': '),
-          Expanded(
-            child: Text(value),
-          ),
+          Expanded(child: Text(value)),
         ],
       ),
     );

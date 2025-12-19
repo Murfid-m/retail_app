@@ -112,12 +112,14 @@ class ProductService {
 
   Future<String> uploadProductImage(File file, String fileName) async {
     try {
-      await _supabase.storage.from('products').upload(
-        fileName,
-        file,
-        fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
-      );
-      
+      await _supabase.storage
+          .from('products')
+          .upload(
+            fileName,
+            file,
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+          );
+
       final url = _supabase.storage.from('products').getPublicUrl(fileName);
       return url;
     } catch (e) {
@@ -125,14 +127,19 @@ class ProductService {
     }
   }
 
-  Future<String> uploadProductImageBytes(Uint8List bytes, String fileName) async {
+  Future<String> uploadProductImageBytes(
+    Uint8List bytes,
+    String fileName,
+  ) async {
     try {
-      await _supabase.storage.from('products').uploadBinary(
-        fileName,
-        bytes,
-        fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
-      );
-      
+      await _supabase.storage
+          .from('products')
+          .uploadBinary(
+            fileName,
+            bytes,
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+          );
+
       final url = _supabase.storage.from('products').getPublicUrl(fileName);
       return url;
     } catch (e) {

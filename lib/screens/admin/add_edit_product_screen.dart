@@ -22,7 +22,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   final _priceController = TextEditingController();
   final _stockController = TextEditingController();
   String _selectedCategory = ProductCategory.kaos;
-  
+
   // Image related
   String? _imageUrl;
   Uint8List? _selectedImageBytes;
@@ -73,9 +73,9 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memilih gambar: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal memilih gambar: $e')));
       }
     }
   }
@@ -88,7 +88,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     });
 
     try {
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}_$_selectedImageName';
+      final fileName =
+          '${DateTime.now().millisecondsSinceEpoch}_$_selectedImageName';
       final url = await _productService.uploadProductImageBytes(
         _selectedImageBytes!,
         fileName,
@@ -102,9 +103,9 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         _isUploadingImage = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal upload gambar: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal upload gambar: $e')));
       }
       return null;
     }
@@ -133,15 +134,19 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   Future<void> _saveProduct() async {
     if (_formKey.currentState!.validate()) {
       // Check if image is required for new product
-      if (!_isEditing && _selectedImageBytes == null && (_imageUrl == null || _imageUrl!.isEmpty)) {
+      if (!_isEditing &&
+          _selectedImageBytes == null &&
+          (_imageUrl == null || _imageUrl!.isEmpty)) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Pilih gambar produk terlebih dahulu')),
         );
         return;
       }
 
-      final productProvider =
-          Provider.of<ProductProvider>(context, listen: false);
+      final productProvider = Provider.of<ProductProvider>(
+        context,
+        listen: false,
+      );
 
       // Upload image if new image selected
       String? finalImageUrl = _imageUrl;
@@ -181,9 +186,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         );
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(productProvider.error ?? 'Terjadi kesalahan'),
-          ),
+          SnackBar(content: Text(productProvider.error ?? 'Terjadi kesalahan')),
         );
       }
     }
@@ -192,9 +195,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Produk' : 'Tambah Produk'),
-      ),
+      appBar: AppBar(title: Text(_isEditing ? 'Edit Produk' : 'Tambah Produk')),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -226,33 +227,36 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                             ),
                           )
                         : _selectedImageBytes != null
-                            ? Image.memory(
-                                _selectedImageBytes!,
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                              )
-                            : (_imageUrl != null && _imageUrl!.isNotEmpty)
-                                ? Image.network(
-                                    _imageUrl!,
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return _buildImagePlaceholder();
-                                    },
-                                  )
-                                : _buildImagePlaceholder(),
+                        ? Image.memory(
+                            _selectedImageBytes!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                          )
+                        : (_imageUrl != null && _imageUrl!.isNotEmpty)
+                        ? Image.network(
+                            _imageUrl!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            errorBuilder: (context, error, stackTrace) {
+                              return _buildImagePlaceholder();
+                            },
+                          )
+                        : _buildImagePlaceholder(),
                   ),
                 ),
               ),
               const SizedBox(height: 8),
-              
+
               // Upload button
               OutlinedButton.icon(
                 onPressed: _isUploadingImage ? null : _pickImage,
                 icon: const Icon(Icons.photo_library),
-                label: Text(_selectedImageBytes != null || (_imageUrl != null && _imageUrl!.isNotEmpty) 
-                    ? 'Ganti Gambar' 
-                    : 'Pilih Gambar'),
+                label: Text(
+                  _selectedImageBytes != null ||
+                          (_imageUrl != null && _imageUrl!.isNotEmpty)
+                      ? 'Ganti Gambar'
+                      : 'Pilih Gambar',
+                ),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
@@ -373,8 +377,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
               Consumer<ProductProvider>(
                 builder: (context, productProvider, child) {
                   return ElevatedButton(
-                    onPressed:
-                        productProvider.isLoading ? null : _saveProduct,
+                    onPressed: productProvider.isLoading ? null : _saveProduct,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _isEditing ? const Color(0xFFFFC20E) : null,
                       foregroundColor: _isEditing ? Colors.black : null,

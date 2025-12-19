@@ -52,7 +52,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const CartScreen()),
+                        MaterialPageRoute(
+                          builder: (context) => const CartScreen(),
+                        ),
                       );
                     },
                   ),
@@ -133,9 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: EdgeInsets.zero,
         children: [
           UserAccountsDrawerHeader(
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor,
-            ),
+            decoration: BoxDecoration(color: Theme.of(context).primaryColor),
             accountName: Text(user?.name ?? 'Guest'),
             accountEmail: Text(user?.email ?? ''),
             currentAccountPicture: CircleAvatar(
@@ -255,8 +255,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       icon: const Icon(Icons.clear),
                       onPressed: () {
                         _searchController.clear();
-                        Provider.of<ProductProvider>(context, listen: false)
-                            .searchProducts('');
+                        Provider.of<ProductProvider>(
+                          context,
+                          listen: false,
+                        ).searchProducts('');
                       },
                     )
                   : null,
@@ -266,8 +268,10 @@ class _HomeScreenState extends State<HomeScreen> {
               filled: true,
             ),
             onChanged: (value) {
-              Provider.of<ProductProvider>(context, listen: false)
-                  .searchProducts(value);
+              Provider.of<ProductProvider>(
+                context,
+                listen: false,
+              ).searchProducts(value);
             },
           ),
         ),
@@ -282,8 +286,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 children: [
                   _buildCategoryChip('Semua', null, productProvider),
-                  ...ProductCategory.all.map((category) =>
-                      _buildCategoryChip(category, category, productProvider)),
+                  ...ProductCategory.all.map(
+                    (category) =>
+                        _buildCategoryChip(category, category, productProvider),
+                  ),
                 ],
               );
             },
@@ -316,9 +322,7 @@ class _HomeScreenState extends State<HomeScreen> {
               final products = productProvider.products;
 
               if (products.isEmpty) {
-                return const Center(
-                  child: Text('Tidak ada produk ditemukan'),
-                );
+                return const Center(child: Text('Tidak ada produk ditemukan'));
               }
 
               return RefreshIndicator(
@@ -375,9 +379,7 @@ class _HomeScreenState extends State<HomeScreen> {
       },
       child: Card(
         clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -399,11 +401,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           );
                         },
                       )
-                    : const Icon(
-                        Icons.image,
-                        size: 50,
-                        color: Colors.grey,
-                      ),
+                    : const Icon(Icons.image, size: 50, color: Colors.grey),
               ),
             ),
             // Product info
@@ -426,10 +424,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 4),
                     Text(
                       product.category,
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
                     ),
                     const Spacer(),
                     Row(
@@ -485,7 +480,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _formatPrice(double price) {
-    return price.toStringAsFixed(0).replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+    return price
+        .toStringAsFixed(0)
+        .replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        );
   }
 }

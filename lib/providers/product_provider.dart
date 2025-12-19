@@ -13,7 +13,10 @@ class ProductProvider with ChangeNotifier {
   String? _selectedCategory;
   String _searchQuery = '';
 
-  List<ProductModel> get products => _filteredProducts.isEmpty && _searchQuery.isEmpty && _selectedCategory == null
+  List<ProductModel> get products =>
+      _filteredProducts.isEmpty &&
+          _searchQuery.isEmpty &&
+          _selectedCategory == null
       ? _products
       : _filteredProducts;
   List<ProductModel> get lowStockProducts => _lowStockProducts;
@@ -62,7 +65,9 @@ class ProductProvider with ChangeNotifier {
 
     if (_searchQuery.isNotEmpty) {
       _filteredProducts = _filteredProducts
-          .where((p) => p.name.toLowerCase().contains(_searchQuery.toLowerCase()))
+          .where(
+            (p) => p.name.toLowerCase().contains(_searchQuery.toLowerCase()),
+          )
           .toList();
     }
   }

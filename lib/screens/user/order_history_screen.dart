@@ -19,15 +19,21 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     Future.microtask(() {
       final user = Provider.of<AuthProvider>(context, listen: false).user;
       if (user != null) {
-        Provider.of<OrderProvider>(context, listen: false)
-            .loadUserOrders(user.id);
+        Provider.of<OrderProvider>(
+          context,
+          listen: false,
+        ).loadUserOrders(user.id);
       }
     });
   }
 
   String _formatPrice(double price) {
-    return price.toStringAsFixed(0).replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+    return price
+        .toStringAsFixed(0)
+        .replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        );
   }
 
   String _formatDate(DateTime date) {
@@ -55,17 +61,12 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                 const SizedBox(height: 16),
                 Text(
                   'Belum ada pesanan',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 18, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Yuk, mulai belanja!',
-                  style: TextStyle(
-                    color: Colors.grey[400],
-                  ),
+                  style: TextStyle(color: Colors.grey[400]),
                 ),
               ],
             ),
@@ -94,9 +95,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   Widget _buildOrderCard(OrderModel order) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -107,9 +106,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
               children: [
                 Text(
                   '#${order.id.substring(0, 8).toUpperCase()}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 _buildStatusChip(order.status),
               ],
@@ -117,71 +114,73 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
             const SizedBox(height: 8),
             Text(
               _formatDate(order.createdAt),
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 12,
-              ),
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
             ),
             const Divider(height: 24),
-            ...order.items.take(2).map((item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(8),
+            ...order.items
+                .take(2)
+                .map(
+                  (item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: item.imageUrl.isNotEmpty
+                                ? Image.network(
+                                    item.imageUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return const Icon(
+                                        Icons.image_not_supported,
+                                        size: 20,
+                                        color: Colors.grey,
+                                      );
+                                    },
+                                  )
+                                : const Icon(Icons.image, size: 20),
+                          ),
                         ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: item.imageUrl.isNotEmpty
-                              ? Image.network(
-                                  item.imageUrl,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return const Icon(Icons.image_not_supported, size: 20, color: Colors.grey);
-                                  },
-                                )
-                              : const Icon(Icons.image, size: 20),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.productName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w500,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.productName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              '${item.quantity}x Rp ${_formatPrice(item.price)}',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 12,
+                              Text(
+                                '${item.quantity}x Rp ${_formatPrice(item.price)}',
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 12,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                )),
+                ),
             if (order.items.length > 2)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(
                   '+${order.items.length - 2} produk lainnya',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
               ),
             const Divider(height: 16),
@@ -190,9 +189,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
               children: [
                 Text(
                   'Total Pembayaran',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(color: Colors.grey[600]),
                 ),
                 Text(
                   'Rp ${_formatPrice(order.totalAmount)}',

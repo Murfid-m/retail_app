@@ -36,7 +36,7 @@ class ProductImage extends StatelessWidget {
           child: CircularProgressIndicator(
             value: loadingProgress.expectedTotalBytes != null
                 ? loadingProgress.cumulativeBytesLoaded /
-                    loadingProgress.expectedTotalBytes!
+                      loadingProgress.expectedTotalBytes!
                 : null,
           ),
         );
@@ -55,18 +55,11 @@ class ProductImage extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.image_outlined,
-            size: 48,
-            color: Colors.grey[400],
-          ),
+          Icon(Icons.image_outlined, size: 48, color: Colors.grey[400]),
           const SizedBox(height: 8),
           Text(
             'No Image',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 12,
-            ),
+            style: TextStyle(color: Colors.grey[600], fontSize: 12),
           ),
         ],
       ),

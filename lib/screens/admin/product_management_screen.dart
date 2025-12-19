@@ -8,7 +8,8 @@ class ProductManagementScreen extends StatefulWidget {
   const ProductManagementScreen({super.key});
 
   @override
-  State<ProductManagementScreen> createState() => _ProductManagementScreenState();
+  State<ProductManagementScreen> createState() =>
+      _ProductManagementScreenState();
 }
 
 class _ProductManagementScreenState extends State<ProductManagementScreen> {
@@ -20,7 +21,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
     'Celana',
     'Jaket',
     'Sepatu',
-    'Aksesoris'
+    'Aksesoris',
   ];
 
   @override
@@ -38,8 +39,12 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
   }
 
   String _formatPrice(double price) {
-    return price.toStringAsFixed(0).replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+    return price
+        .toStringAsFixed(0)
+        .replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        );
   }
 
   Widget _buildSearchAndFilter(ProductProvider productProvider) {
@@ -66,7 +71,6 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               filled: true,
-
             ),
             onChanged: (value) {
               productProvider.searchProducts(value);
@@ -90,7 +94,8 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
   }
 
   Widget _buildCategoryChip(String category, ProductProvider productProvider) {
-    final isSelected = (category == 'Semua' && productProvider.selectedCategory == null) ||
+    final isSelected =
+        (category == 'Semua' && productProvider.selectedCategory == null) ||
         productProvider.selectedCategory == category;
 
     return Padding(
@@ -151,7 +156,8 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              productProvider.searchQuery.isNotEmpty || productProvider.selectedCategory != null
+                              productProvider.searchQuery.isNotEmpty ||
+                                      productProvider.selectedCategory != null
                                   ? 'Tidak ada produk ditemukan'
                                   : 'Belum ada produk',
                               style: TextStyle(
@@ -161,13 +167,15 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 16),
-                            if (productProvider.searchQuery.isEmpty && productProvider.selectedCategory == null)
+                            if (productProvider.searchQuery.isEmpty &&
+                                productProvider.selectedCategory == null)
                               ElevatedButton.icon(
                                 onPressed: () {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => const AddEditProductScreen(),
+                                      builder: (context) =>
+                                          const AddEditProductScreen(),
                                     ),
                                   );
                                 },
@@ -183,7 +191,10 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           itemCount: products.length,
                           itemBuilder: (context, index) {
-                            return _buildProductCard(products[index], productProvider);
+                            return _buildProductCard(
+                              products[index],
+                              productProvider,
+                            );
                           },
                         ),
                       ),
@@ -206,12 +217,13 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
     );
   }
 
-  Widget _buildProductCard(ProductModel product, ProductProvider productProvider) {
+  Widget _buildProductCard(
+    ProductModel product,
+    ProductProvider productProvider,
+  ) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
@@ -258,7 +270,10 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
                   ),
                   const SizedBox(height: 4),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: Theme.of(context).primaryColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(4),
@@ -303,7 +318,8 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => AddEditProductScreen(product: product),
+                        builder: (context) =>
+                            AddEditProductScreen(product: product),
                       ),
                     );
                   },
@@ -316,7 +332,8 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
                       builder: (context) => AlertDialog(
                         title: const Text('Hapus Produk'),
                         content: Text(
-                            'Apakah Anda yakin ingin menghapus "${product.name}"?'),
+                          'Apakah Anda yakin ingin menghapus "${product.name}"?',
+                        ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
@@ -325,12 +342,13 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
                           TextButton(
                             onPressed: () async {
                               Navigator.pop(context);
-                              final success =
-                                  await productProvider.deleteProduct(product.id);
+                              final success = await productProvider
+                                  .deleteProduct(product.id);
                               if (mounted && success) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                      content: Text('Produk berhasil dihapus')),
+                                    content: Text('Produk berhasil dihapus'),
+                                  ),
                                 );
                               }
                             },

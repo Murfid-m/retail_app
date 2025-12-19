@@ -28,7 +28,9 @@ class ProductModel {
       category: json['category'] ?? '',
       imageUrl: json['image_url'] ?? '',
       stock: json['stock'] ?? 0,
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+        json['created_at'] ?? DateTime.now().toIso8601String(),
+      ),
     );
   }
 
@@ -87,5 +89,12 @@ class ProductCategory {
   static const String sepatu = 'Sepatu';
   static const String aksesoris = 'Aksesoris';
 
-  static List<String> get all => [kaos, kemeja, celana, jaket, sepatu, aksesoris];
+  static List<String> get all => [
+    kaos,
+    kemeja,
+    celana,
+    jaket,
+    sepatu,
+    aksesoris,
+  ];
 }

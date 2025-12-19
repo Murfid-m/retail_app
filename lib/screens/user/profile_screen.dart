@@ -90,12 +90,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            Text(
-              user?.email ?? '',
-              style: TextStyle(
-                color: Colors.grey[600],
-              ),
-            ),
+            Text(user?.email ?? '', style: TextStyle(color: Colors.grey[600])),
             const SizedBox(height: 24),
 
             // Profile card
@@ -113,9 +108,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         Text(
                           'Informasi Profil',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         TextButton.icon(
                           onPressed: () {
@@ -277,17 +271,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Text(
                   label,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   controller.text.isEmpty ? '-' : controller.text,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
               ],
             ),
@@ -303,9 +292,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),
       validator: validator,
     );

@@ -8,8 +8,12 @@ class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
 
   String _formatPrice(double price) {
-    return price.toStringAsFixed(0).replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+    return price
+        .toStringAsFixed(0)
+        .replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        );
   }
 
   @override
@@ -28,7 +32,8 @@ class CartScreen extends StatelessWidget {
                     builder: (context) => AlertDialog(
                       title: const Text('Hapus Semua'),
                       content: const Text(
-                          'Apakah Anda yakin ingin menghapus semua item?'),
+                        'Apakah Anda yakin ingin menghapus semua item?',
+                      ),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context),
@@ -66,17 +71,12 @@ class CartScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     'Keranjang masih kosong',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Yuk, mulai belanja!',
-                    style: TextStyle(
-                      color: Colors.grey[400],
-                    ),
+                    style: TextStyle(color: Colors.grey[400]),
                   ),
                 ],
               ),
@@ -102,12 +102,14 @@ class CartScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCartItem(BuildContext context, CartItem item, CartProvider cart) {
+  Widget _buildCartItem(
+    BuildContext context,
+    CartItem item,
+    CartProvider cart,
+  ) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
@@ -152,10 +154,7 @@ class CartScreen extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     item.product.category,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -255,9 +254,7 @@ class CartScreen extends StatelessWidget {
                   children: [
                     Text(
                       'Total (${cart.totalItems} item)',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(color: Colors.grey[600]),
                     ),
                     Text(
                       'Rp ${_formatPrice(cart.totalPrice)}',
