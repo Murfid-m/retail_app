@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/product_provider.dart';
 import '../../models/product_model.dart';
+import '../../widgets/skeleton_loading.dart';
 import 'add_edit_product_screen.dart';
 
 class ProductManagementScreen extends StatefulWidget {
@@ -119,85 +120,84 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
     return Scaffold(
       body: Consumer<ProductProvider>(
         builder: (context, productProvider, child) {
-          if (productProvider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (productProvider.error != null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(productProvider.error!),
-                  ElevatedButton(
-                    onPressed: () => productProvider.loadProducts(),
-                    child: const Text('Coba Lagi'),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          final products = productProvider.products;
-
           return Column(
             children: [
               _buildSearchAndFilter(productProvider),
               Expanded(
-                child: products.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.inventory_2_outlined,
-                              size: 100,
-                              color: Colors.grey[300],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              productProvider.searchQuery.isNotEmpty ||
-                                      productProvider.selectedCategory != null
-                                  ? 'Tidak ada produk ditemukan'
-                                  : 'Belum ada produk',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.grey[600],
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 16),
-                            if (productProvider.searchQuery.isEmpty &&
-                                productProvider.selectedCategory == null)
-                              ElevatedButton.icon(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const AddEditProductScreen(),
-                                    ),
-                                  );
-                                },
-                                icon: const Icon(Icons.add),
-                                label: const Text('Tambah Produk'),
-                              ),
-                          ],
-                        ),
+                child: productProvider.isLoading
+                    ? ListSkeleton(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: 5,
+                        itemBuilder: (context, index) => const ProductCardSkeleton(),
+                        separator: const SizedBox(height: 12),
                       )
-                    : RefreshIndicator(
-                        onRefresh: () => productProvider.loadProducts(),
-                        child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: products.length,
-                          itemBuilder: (context, index) {
-                            return _buildProductCard(
-                              products[index],
-                              productProvider,
-                            );
-                          },
-                        ),
-                      ),
+                    : productProvider.error != null
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(productProvider.error!),
+                                ElevatedButton(
+                                  onPressed: () => productProvider.loadProducts(),
+                                  child: const Text('Coba Lagi'),
+                                ),
+                              ],
+                            ),
+                          )
+                        : productProvider.products.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.inventory_2_outlined,
+                                      size: 100,
+                                      color: Colors.grey[300],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      productProvider.searchQuery.isNotEmpty ||
+                                              productProvider.selectedCategory != null
+                                          ? 'Tidak ada produk ditemukan'
+                                          : 'Belum ada produk',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        color: Colors.grey[600],
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    if (productProvider.searchQuery.isEmpty &&
+                                        productProvider.selectedCategory == null)
+                                      ElevatedButton.icon(
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  const AddEditProductScreen(),
+                                            ),
+                                          );
+                                        },
+                                        icon: const Icon(Icons.add),
+                                        label: const Text('Tambah Produk'),
+                                      ),
+                                  ],
+                                ),
+                              )
+                            : RefreshIndicator(
+                                onRefresh: () => productProvider.loadProducts(),
+                                child: ListView.builder(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  itemCount: productProvider.products.length,
+                                  itemBuilder: (context, index) {
+                                    return _buildProductCard(
+                                      productProvider.products[index],
+                                      productProvider,
+                                    );
+                                  },
+                                ),
+                              ),
               ),
             ],
           );

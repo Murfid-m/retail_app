@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/order_provider.dart';
 import '../../models/order_model.dart';
+import '../../widgets/skeleton_loading.dart';
 
 class OrderManagementScreen extends StatefulWidget {
   const OrderManagementScreen({super.key});
@@ -197,53 +198,54 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
   Widget build(BuildContext context) {
     return Consumer<OrderProvider>(
       builder: (context, orderProvider, child) {
-        if (orderProvider.isLoading) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final orders = orderProvider.orders;
-
         return Column(
           children: [
             _buildSearchAndFilter(orderProvider),
             Expanded(
-              child: orders.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.receipt_long_outlined,
-                            size: 100,
-                            color: Colors.grey[300],
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            orderProvider.searchQuery.isNotEmpty ||
-                                    orderProvider.selectedStatus != null ||
-                                    orderProvider.startDate != null ||
-                                    orderProvider.endDate != null
-                                ? 'Tidak ada pesanan ditemukan'
-                                : 'Belum ada pesanan',
-                            style: TextStyle(
-                              fontSize: 18,
-                              color: Colors.grey[600],
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
+              child: orderProvider.isLoading
+                  ? ListSkeleton(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: 5,
+                      itemBuilder: (context, index) => const OrderCardSkeleton(),
+                      separator: const SizedBox(height: 12),
                     )
-                  : RefreshIndicator(
-                      onRefresh: () => orderProvider.loadAllOrders(),
-                      child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: orders.length,
-                        itemBuilder: (context, index) {
-                          return _buildOrderCard(orders[index], orderProvider);
-                        },
-                      ),
-                    ),
+                  : orderProvider.orders.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.receipt_long_outlined,
+                                size: 100,
+                                color: Colors.grey[300],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                orderProvider.searchQuery.isNotEmpty ||
+                                        orderProvider.selectedStatus != null ||
+                                        orderProvider.startDate != null ||
+                                        orderProvider.endDate != null
+                                    ? 'Tidak ada pesanan ditemukan'
+                                    : 'Belum ada pesanan',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.grey[600],
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        )
+                      : RefreshIndicator(
+                          onRefresh: () => orderProvider.loadAllOrders(),
+                          child: ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: orderProvider.orders.length,
+                            itemBuilder: (context, index) {
+                              return _buildOrderCard(orderProvider.orders[index], orderProvider);
+                            },
+                          ),
+                        ),
             ),
           ],
         );

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../providers/order_provider.dart';
 import '../../widgets/seed_data_dialog.dart';
+import '../../widgets/skeleton_loading.dart';
 
 class StatisticsScreen extends StatefulWidget {
   const StatisticsScreen({super.key});
@@ -67,7 +68,35 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       body: Consumer<OrderProvider>(
         builder: (context, orderProvider, child) {
         if (orderProvider.isLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // KPI Cards skeleton
+                Row(
+                  children: [
+                    Expanded(child: StatCardSkeleton()),
+                    const SizedBox(width: 8),
+                    Expanded(child: StatCardSkeleton()),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(child: StatCardSkeleton()),
+                    const SizedBox(width: 8),
+                    Expanded(child: StatCardSkeleton()),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                // Chart section skeleton
+                SkeletonLoading(width: double.infinity, height: 300, borderRadius: BorderRadius.circular(12)),
+                const SizedBox(height: 24),
+                SkeletonLoading(width: double.infinity, height: 300, borderRadius: BorderRadius.circular(12)),
+              ],
+            ),
+          );
         }
 
         final stats = orderProvider.statistics;

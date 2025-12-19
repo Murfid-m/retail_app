@@ -6,6 +6,7 @@ import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../models/product_model.dart';
+import '../../widgets/skeleton_loading.dart';
 import '../auth/login_screen.dart';
 import 'cart_screen.dart';
 import 'product_detail_screen.dart';
@@ -289,7 +290,15 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Consumer<ProductProvider>(
             builder: (context, productProvider, child) {
               if (productProvider.isLoading) {
-                return const Center(child: CircularProgressIndicator());
+                return GridSkeleton(
+                  padding: const EdgeInsets.all(16),
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.7,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  itemCount: 6,
+                  itemBuilder: (context, index) => const ProductCardSkeleton(),
+                );
               }
 
               if (productProvider.error != null) {
@@ -371,25 +380,53 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Product image
+            // Product image with multi-image indicator
             Expanded(
               flex: 3,
-              child: Container(
-                width: double.infinity,
-                color: Colors.grey[200],
-                child: product.imageUrl.isNotEmpty
-                    ? Image.network(
-                        product.imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Icon(
-                            Icons.image_not_supported,
-                            size: 50,
-                            color: Colors.grey,
-                          );
-                        },
-                      )
-                    : const Icon(Icons.image, size: 50, color: Colors.grey),
+              child: Stack(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    color: Colors.grey[200],
+                    child: product.imageUrl.isNotEmpty
+                        ? Image.network(
+                            product.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(
+                                Icons.image_not_supported,
+                                size: 50,
+                                color: Colors.grey,
+                              );
+                            },
+                          )
+                        : const Icon(Icons.image, size: 50, color: Colors.grey),
+                  ),
+                  // Multi-image indicator
+                  if (product.allImages.length > 1)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.photo_library, size: 12, color: Colors.white),
+                            const SizedBox(width: 2),
+                            Text(
+                              '${product.allImages.length}',
+                              style: const TextStyle(color: Colors.white, fontSize: 10),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
             // Product info
@@ -409,11 +446,28 @@ class _HomeScreenState extends State<HomeScreen> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      product.category,
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                    ),
+                    const SizedBox(height: 2),
+                    // Rating row
+                    if (product.totalReviews > 0)
+                      Row(
+                        children: [
+                          const Icon(Icons.star, size: 12, color: Colors.amber),
+                          const SizedBox(width: 2),
+                          Text(
+                            product.averageRating.toStringAsFixed(1),
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            ' (${product.totalReviews})',
+                            style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+                          ),
+                        ],
+                      )
+                    else
+                      Text(
+                        product.category,
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      ),
                     const Spacer(),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
