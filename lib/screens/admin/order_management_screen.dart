@@ -69,7 +69,6 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               filled: true,
-              fillColor: Colors.grey[100],
             ),
             onChanged: (value) {
               orderProvider.searchOrders(value);
@@ -266,7 +265,9 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                   Text(
                     order.userName,
                     style: TextStyle(
-                      color: Colors.grey[600],
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFFFFC20E)
+                          : Colors.grey[600],
                       fontSize: 14,
                     ),
                   ),
@@ -292,7 +293,9 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                 'Rp ${_formatPrice(order.totalAmount)}',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Theme.of(context).primaryColor,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFFFFC20E)
+                      : Theme.of(context).primaryColor,
                 ),
               ),
             ],

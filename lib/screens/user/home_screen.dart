@@ -73,6 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Text(
                           '${cart.totalItems}',
                           style: const TextStyle(
+                            color: Colors.white,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
@@ -231,11 +232,24 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.all(16.0),
           child: TextField(
             controller: _searchController,
-            style: TextStyle(color: kPrimaryColor),
+            style: TextStyle(
+              color: Theme.of(context).brightness == Brightness.dark 
+                ? kAccentColor 
+                : kPrimaryColor,
+            ),
             decoration: InputDecoration(
               hintText: 'Cari produk...',
-              hintStyle: TextStyle(color: kPrimaryColor.withOpacity(0.6)),
-              prefixIcon: Icon(Icons.search, color: kPrimaryColor),
+              hintStyle: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                  ? kAccentColor.withOpacity(0.6)
+                  : kPrimaryColor.withOpacity(0.6),
+              ),
+              prefixIcon: Icon(
+                Icons.search, 
+                color: Theme.of(context).brightness == Brightness.dark
+                  ? kAccentColor
+                  : kPrimaryColor,
+              ),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear),
@@ -250,7 +264,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               filled: true,
-              fillColor: Colors.grey[100],
             ),
             onChanged: (value) {
               Provider.of<ProductProvider>(context, listen: false)

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../main.dart';
 import 'register_screen.dart';
+import 'code_verification_screen.dart';
 import '../user/home_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
 
@@ -47,9 +49,35 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(authProvider.error ?? 'Login gagal')),
-        );
+        // Check if user is not verified
+        final error = authProvider.error ?? 'Login gagal';
+        
+        if (error.contains('UNVERIFIED') || error.contains('belum diverifikasi')) {
+          // Redirect to verification screen
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Email belum diverifikasi. Silakan masukkan kode verifikasi.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CodeVerificationScreen(
+                email: _emailController.text.trim(),
+                password: _passwordController.text,
+              ),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(error),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
@@ -69,7 +97,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   // Logo
                   Image.asset(
-                    'assets/images/logo.png',
+                    Theme.of(context).brightness == Brightness.dark
+                      ? 'assets/images/logo_dark.png'
+                      : 'assets/images/logo.png',
                     width: 80,
                     height: 80,
                     errorBuilder: (context, error, stackTrace) {
@@ -86,7 +116,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: Theme.of(context).primaryColor,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : Theme.of(context).primaryColor,
                         ),
                   ),
                   const SizedBox(height: 8),
@@ -157,19 +189,25 @@ class _LoginScreenState extends State<LoginScreen> {
                   // Login button
                   Consumer<AuthProvider>(
                     builder: (context, auth, child) {
+                      final isDark = Theme.of(context).brightness == Brightness.dark;
                       return ElevatedButton(
                         onPressed: auth.isLoading ? null : _login,
                         style: ElevatedButton.styleFrom(
+                          backgroundColor: isDark ? kAccentColor : kPrimaryColor,
+                          foregroundColor: isDark ? Colors.black : Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                         child: auth.isLoading
-                            ? const SizedBox(
+                            ? SizedBox(
                                 height: 20,
                                 width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: isDark ? Colors.black : Colors.white,
+                                ),
                               )
                             : const Text(
                                 'Masuk',
