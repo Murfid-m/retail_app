@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../auth/login_screen.dart';
 import 'product_management_screen.dart';
 import 'order_management_screen.dart';
 import 'statistics_screen.dart';
+import 'low_stock_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -20,6 +22,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     ProductManagementScreen(),
     OrderManagementScreen(),
     StatisticsScreen(),
+    LowStockScreen(),
   ];
 
   @override
@@ -72,9 +75,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           padding: EdgeInsets.zero,
           children: [
             UserAccountsDrawerHeader(
-              decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor,
-              ),
+              decoration: BoxDecoration(color: Theme.of(context).primaryColor),
               accountName: Text(user?.name ?? 'Admin'),
               accountEmail: Text(user?.email ?? ''),
               currentAccountPicture: CircleAvatar(
@@ -121,6 +122,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 });
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.warning_amber_outlined),
+              title: const Text('Stok Rendah'),
+              selected: _currentIndex == 3,
+              onTap: () {
+                Navigator.pop(context);
+                setState(() {
+                  _currentIndex = 3;
+                });
+              },
+            ),
+            const Divider(),
+            Consumer<ThemeProvider>(
+              builder: (context, themeProvider, child) {
+                return SwitchListTile(
+                  secondary: Icon(
+                    themeProvider.isDarkMode
+                        ? Icons.dark_mode
+                        : Icons.light_mode,
+                  ),
+                  title: const Text('Mode Gelap'),
+                  value: themeProvider.isDarkMode,
+                  onChanged: (value) {
+                    themeProvider.toggleTheme();
+                  },
+                );
+              },
+            ),
             const Divider(),
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
@@ -130,7 +159,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 if (mounted) {
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const LoginScreen(),
+                    ),
                   );
                 }
               },
@@ -161,6 +192,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             icon: Icon(Icons.bar_chart_outlined),
             selectedIcon: Icon(Icons.bar_chart),
             label: 'Statistik',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.warning_amber_outlined),
+            selectedIcon: Icon(Icons.warning_amber),
+            label: 'Stok Rendah',
           ),
         ],
       ),

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../main.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../models/product_model.dart';
+import '../../widgets/skeleton_loading.dart';
 import '../auth/login_screen.dart';
 import 'cart_screen.dart';
 import 'product_detail_screen.dart';
@@ -50,7 +53,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const CartScreen()),
+                        MaterialPageRoute(
+                          builder: (context) => const CartScreen(),
+                        ),
                       );
                     },
                   ),
@@ -131,9 +136,7 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: EdgeInsets.zero,
         children: [
           UserAccountsDrawerHeader(
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor,
-            ),
+            decoration: BoxDecoration(color: Theme.of(context).primaryColor),
             accountName: Text(user?.name ?? 'Guest'),
             accountEmail: Text(user?.email ?? ''),
             currentAccountPicture: CircleAvatar(
@@ -189,6 +192,21 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           const Divider(),
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, child) {
+              return SwitchListTile(
+                secondary: Icon(
+                  themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                ),
+                title: const Text('Mode Gelap'),
+                value: themeProvider.isDarkMode,
+                onChanged: (value) {
+                  themeProvider.toggleTheme();
+                },
+              );
+            },
+          ),
+          const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text('Keluar', style: TextStyle(color: Colors.red)),
@@ -215,16 +233,33 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.all(16.0),
           child: TextField(
             controller: _searchController,
+            style: TextStyle(
+              color: Theme.of(context).brightness == Brightness.dark 
+                ? kAccentColor 
+                : kPrimaryColor,
+            ),
             decoration: InputDecoration(
               hintText: 'Cari produk...',
-              prefixIcon: const Icon(Icons.search),
+              hintStyle: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                  ? kAccentColor.withOpacity(0.6)
+                  : kPrimaryColor.withOpacity(0.6),
+              ),
+              prefixIcon: Icon(
+                Icons.search, 
+                color: Theme.of(context).brightness == Brightness.dark
+                  ? kAccentColor
+                  : kPrimaryColor,
+              ),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear),
                       onPressed: () {
                         _searchController.clear();
-                        Provider.of<ProductProvider>(context, listen: false)
-                            .searchProducts('');
+                        Provider.of<ProductProvider>(
+                          context,
+                          listen: false,
+                        ).searchProducts('');
                       },
                     )
                   : null,
@@ -232,11 +267,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               filled: true,
-              fillColor: Colors.grey[100],
             ),
             onChanged: (value) {
-              Provider.of<ProductProvider>(context, listen: false)
-                  .searchProducts(value);
+              Provider.of<ProductProvider>(
+                context,
+                listen: false,
+              ).searchProducts(value);
             },
           ),
         ),
@@ -251,8 +287,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 children: [
                   _buildCategoryChip('Semua', null, productProvider),
-                  ...ProductCategory.all.map((category) =>
-                      _buildCategoryChip(category, category, productProvider)),
+                  ...ProductCategory.all.map(
+                    (category) =>
+                        _buildCategoryChip(category, category, productProvider),
+                  ),
                 ],
               );
             },
@@ -264,7 +302,15 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Consumer<ProductProvider>(
             builder: (context, productProvider, child) {
               if (productProvider.isLoading) {
-                return const Center(child: CircularProgressIndicator());
+                return GridSkeleton(
+                  padding: const EdgeInsets.all(16),
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.7,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  itemCount: 6,
+                  itemBuilder: (context, index) => const ProductCardSkeleton(),
+                );
               }
 
               if (productProvider.error != null) {
@@ -285,9 +331,7 @@ class _HomeScreenState extends State<HomeScreen> {
               final products = productProvider.products;
 
               if (products.isEmpty) {
-                return const Center(
-                  child: Text('Tidak ada produk ditemukan'),
-                );
+                return const Center(child: Text('Tidak ada produk ditemukan'));
               }
 
               return RefreshIndicator(
@@ -344,35 +388,57 @@ class _HomeScreenState extends State<HomeScreen> {
       },
       child: Card(
         clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Product image
+            // Product image with multi-image indicator
             Expanded(
               flex: 3,
-              child: Container(
-                width: double.infinity,
-                color: Colors.grey[200],
-                child: product.imageUrl.isNotEmpty
-                    ? Image.network(
-                        product.imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Icon(
-                            Icons.image_not_supported,
-                            size: 50,
-                            color: Colors.grey,
-                          );
-                        },
-                      )
-                    : const Icon(
-                        Icons.image,
-                        size: 50,
-                        color: Colors.grey,
+              child: Stack(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    color: Colors.grey[200],
+                    child: product.imageUrl.isNotEmpty
+                        ? Image.network(
+                            product.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(
+                                Icons.image_not_supported,
+                                size: 50,
+                                color: Colors.grey,
+                              );
+                            },
+                          )
+                        : const Icon(Icons.image, size: 50, color: Colors.grey),
+                  ),
+                  // Multi-image indicator
+                  if (product.allImages.length > 1)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.photo_library, size: 12, color: Colors.white),
+                            const SizedBox(width: 2),
+                            Text(
+                              '${product.allImages.length}',
+                              style: const TextStyle(color: Colors.white, fontSize: 10),
+                            ),
+                          ],
+                        ),
                       ),
+                    ),
+                ],
               ),
             ),
             // Product info
@@ -392,14 +458,28 @@ class _HomeScreenState extends State<HomeScreen> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      product.category,
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 12,
+                    const SizedBox(height: 2),
+                    // Rating row
+                    if (product.totalReviews > 0)
+                      Row(
+                        children: [
+                          const Icon(Icons.star, size: 12, color: Colors.amber),
+                          const SizedBox(width: 2),
+                          Text(
+                            product.averageRating.toStringAsFixed(1),
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            ' (${product.totalReviews})',
+                            style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+                          ),
+                        ],
+                      )
+                    else
+                      Text(
+                        product.category,
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
                       ),
-                    ),
                     const Spacer(),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -407,8 +487,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         Expanded(
                           child: Text(
                             'Rp ${_formatPrice(product.price)}',
-                            style: TextStyle(
-                              color: Theme.of(context).primaryColor,
+                            style: const TextStyle(
+                              color: kPrimaryColor,
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
                             ),
@@ -454,7 +534,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _formatPrice(double price) {
-    return price.toStringAsFixed(0).replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+    return price
+        .toStringAsFixed(0)
+        .replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        );
   }
 }

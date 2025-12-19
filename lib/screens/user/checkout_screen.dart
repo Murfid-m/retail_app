@@ -35,8 +35,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   String _formatPrice(double price) {
-    return price.toStringAsFixed(0).replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+    return price
+        .toStringAsFixed(0)
+        .replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        );
   }
 
   Future<void> _processOrder() async {
@@ -58,7 +62,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     if (order != null && mounted) {
       // Send order confirmation email (don't await, run in background)
       _emailService.sendOrderConfirmation(user: user, order: order);
-      
+
       cartProvider.clearCart();
       Navigator.pushReplacement(
         context,
@@ -68,9 +72,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       );
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(orderProvider.error ?? 'Gagal membuat pesanan'),
-        ),
+        SnackBar(content: Text(orderProvider.error ?? 'Gagal membuat pesanan')),
       );
     }
   }
@@ -82,9 +84,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final user = authProvider.user;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Checkout'),
-      ),
+      appBar: AppBar(title: const Text('Checkout')),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -108,9 +108,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           const SizedBox(width: 8),
                           Text(
                             'Informasi Pemesan',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -142,9 +141,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           const SizedBox(width: 8),
                           Text(
                             'Alamat Pengiriman',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -203,66 +201,75 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           const SizedBox(width: 8),
                           Text(
                             'Ringkasan Pesanan',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
                       const Divider(height: 24),
-                      ...cartProvider.items.map((item) => Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 50,
-                                  height: 50,
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[200],
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: item.product.imageUrl.isNotEmpty
-                                        ? Image.network(
-                                            item.product.imageUrl,
-                                            fit: BoxFit.cover,
-                                          )
-                                        : const Icon(Icons.image, size: 20),
-                                  ),
+                      ...cartProvider.items.map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[200],
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        item.product.name,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: item.product.imageUrl.isNotEmpty
+                                      ? Image.network(
+                                          item.product.imageUrl,
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                                return const Icon(
+                                                  Icons.image_not_supported,
+                                                  size: 20,
+                                                  color: Colors.grey,
+                                                );
+                                              },
+                                        )
+                                      : const Icon(Icons.image, size: 20),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.product.name,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w500,
                                       ),
-                                      Text(
-                                        '${item.quantity} x Rp ${_formatPrice(item.product.price)}',
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 12,
-                                        ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      '${item.quantity} x Rp ${_formatPrice(item.product.price)}',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 12,
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
-                                Text(
-                                  'Rp ${_formatPrice(item.totalPrice)}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              ),
+                              Text(
+                                'Rp ${_formatPrice(item.totalPrice)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
                                 ),
-                              ],
-                            ),
-                          )),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                       const Divider(),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -321,10 +328,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text(
-                      'Buat Pesanan',
-                      style: TextStyle(fontSize: 16),
-                    ),
+                  : const Text('Buat Pesanan', style: TextStyle(fontSize: 16)),
             );
           },
         ),
@@ -338,10 +342,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       children: [
         SizedBox(
           width: 80,
-          child: Text(
-            label,
-            style: TextStyle(color: Colors.grey[600]),
-          ),
+          child: Text(label, style: TextStyle(color: Colors.grey[600])),
         ),
         const Text(': '),
         Expanded(

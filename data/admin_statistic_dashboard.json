@@ -1,0 +1,55 @@
+{
+  "summary_cards": {
+    "today": {
+      "total_sales": 714,
+      "total_orders": 4
+    },
+    "this_week": {
+      "total_sales": 15211,
+      "total_orders": 46
+    },
+    "this_month": {
+      "total_sales": 83030,
+      "total_orders": 223
+    },
+    "all_time": {
+      "total_sales": 2261537,
+      "total_orders": 4922
+    }
+  },
+  "daily_sales_last_7_days": [
+    {
+      "date": "2018-12-24",
+      "sales": 6233
+    },
+    {
+      "date": "2018-12-25",
+      "sales": 2699
+    },
+    {
+      "date": "2018-12-26",
+      "sales": 815
+    },
+    {
+      "date": "2018-12-27",
+      "sales": 178
+    },
+    {
+      "date": "2018-12-28",
+      "sales": 1657
+    },
+    {
+      "date": "2018-12-29",
+      "sales": 2916
+    },
+    {
+      "date": "2018-12-30",
+      "sales": 714
+    }
+  ],
+  "metadata": {
+    "reference_date": "2018-12-30",
+    "currency": "IDR",
+    "data_source": "normalized_fact_sales"
+  }
+}

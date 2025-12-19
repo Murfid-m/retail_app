@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../main.dart';
 import 'register_screen.dart';
 import 'code_verification_screen.dart';
 import '../user/home_screen.dart';
@@ -29,7 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      
+
       final success = await authProvider.signIn(
         email: _emailController.text.trim(),
         password: _passwordController.text,
@@ -39,7 +40,9 @@ class _LoginScreenState extends State<LoginScreen> {
         if (authProvider.isAdmin) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
+            MaterialPageRoute(
+              builder: (context) => const AdminDashboardScreen(),
+            ),
           );
         } else {
           Navigator.pushReplacement(
@@ -95,10 +98,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Logo
-                  Icon(
-                    Icons.shopping_bag,
-                    size: 80,
-                    color: Theme.of(context).primaryColor,
+                  Image.asset(
+                    Theme.of(context).brightness == Brightness.dark
+                      ? 'assets/images/logo_dark.png'
+                      : 'assets/images/logo.png',
+                    width: 80,
+                    height: 80,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Icon(
+                        Icons.shopping_bag,
+                        size: 80,
+                        color: Theme.of(context).primaryColor,
+                      );
+                    },
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -106,16 +118,18 @@ class _LoginScreenState extends State<LoginScreen> {
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: Theme.of(context).primaryColor,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : Theme.of(context).primaryColor,
                         ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Masuk ke akun Anda',
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 40),
 
@@ -177,19 +191,25 @@ class _LoginScreenState extends State<LoginScreen> {
                   // Login button
                   Consumer<AuthProvider>(
                     builder: (context, auth, child) {
+                      final isDark = Theme.of(context).brightness == Brightness.dark;
                       return ElevatedButton(
                         onPressed: auth.isLoading ? null : _login,
                         style: ElevatedButton.styleFrom(
+                          backgroundColor: isDark ? kAccentColor : kPrimaryColor,
+                          foregroundColor: isDark ? Colors.black : Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                         child: auth.isLoading
-                            ? const SizedBox(
+                            ? SizedBox(
                                 height: 20,
                                 width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: isDark ? Colors.black : Colors.white,
+                                ),
                               )
                             : const Text(
                                 'Masuk',

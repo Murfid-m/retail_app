@@ -8,8 +8,12 @@ class OrderSuccessScreen extends StatelessWidget {
   const OrderSuccessScreen({super.key, required this.order});
 
   String _formatPrice(double price) {
-    return price.toStringAsFixed(0).replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+    return price
+        .toStringAsFixed(0)
+        .replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        );
   }
 
   @override
@@ -37,18 +41,12 @@ class OrderSuccessScreen extends StatelessWidget {
               const SizedBox(height: 24),
               const Text(
                 'Pesanan Berhasil!',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Text(
                 'Terima kasih telah berbelanja',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 16,
-                ),
+                style: TextStyle(color: Colors.grey[600], fontSize: 16),
               ),
               const SizedBox(height: 32),
               Card(
@@ -59,11 +57,20 @@ class OrderSuccessScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      _buildOrderInfo('Order ID', '#${order.id.substring(0, 8).toUpperCase()}'),
+                      _buildOrderInfo(
+                        'Order ID',
+                        '#${order.id.substring(0, 8).toUpperCase()}',
+                      ),
                       const Divider(height: 24),
-                      _buildOrderInfo('Total Item', '${order.items.length} produk'),
+                      _buildOrderInfo(
+                        'Total Item',
+                        '${order.items.length} produk',
+                      ),
                       const Divider(height: 24),
-                      _buildOrderInfo('Total Pembayaran', 'Rp ${_formatPrice(order.totalAmount)}'),
+                      _buildOrderInfo(
+                        'Total Pembayaran',
+                        'Rp ${_formatPrice(order.totalAmount)}',
+                      ),
                       const Divider(height: 24),
                       _buildOrderInfo('Status', _getStatusText(order.status)),
                     ],
@@ -77,7 +84,9 @@ class OrderSuccessScreen extends StatelessWidget {
                   onPressed: () {
                     Navigator.pushAndRemoveUntil(
                       context,
-                      MaterialPageRoute(builder: (context) => const HomeScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => const HomeScreen(),
+                      ),
                       (route) => false,
                     );
                   },
@@ -101,14 +110,8 @@ class OrderSuccessScreen extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: TextStyle(color: Colors.grey[600]),
-        ),
-        Text(
-          value,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
+        Text(label, style: TextStyle(color: Colors.grey[600])),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
       ],
     );
   }

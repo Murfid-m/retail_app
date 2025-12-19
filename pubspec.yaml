@@ -46,6 +46,9 @@ dependencies:
   cached_network_image: ^3.4.1
   image_picker: ^1.1.2
   fl_chart: ^1.0.0
+  # Modern fonts
+  google_fonts: ^5.0.0
+  shared_preferences: ^2.3.3
 
 dev_dependencies:
   flutter_test:
@@ -68,6 +71,10 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - data/dashboard_summary.json
+    - assets/images/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
