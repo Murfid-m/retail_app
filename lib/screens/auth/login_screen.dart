@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import 'register_screen.dart';
+import 'code_verification_screen.dart';
 import '../user/home_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
 
@@ -47,9 +48,35 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(authProvider.error ?? 'Login gagal')),
-        );
+        // Check if user is not verified
+        final error = authProvider.error ?? 'Login gagal';
+        
+        if (error.contains('UNVERIFIED') || error.contains('belum diverifikasi')) {
+          // Redirect to verification screen
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Email belum diverifikasi. Silakan masukkan kode verifikasi.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CodeVerificationScreen(
+                email: _emailController.text.trim(),
+                password: _passwordController.text,
+              ),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(error),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }

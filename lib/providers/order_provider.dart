@@ -23,6 +23,10 @@ class OrderProvider with ChangeNotifier {
   String _searchQuery = '';
   DateTime? _startDate;
   DateTime? _endDate;
+  
+  // Statistics date range
+  DateTime? _statsStartDate;
+  DateTime? _statsEndDate;
 
   List<OrderModel> get orders => _filteredOrders.isEmpty && _searchQuery.isEmpty && _selectedStatus == null && _startDate == null && _endDate == null
       ? _orders
@@ -36,6 +40,8 @@ class OrderProvider with ChangeNotifier {
   String get searchQuery => _searchQuery;
   DateTime? get startDate => _startDate;
   DateTime? get endDate => _endDate;
+  DateTime? get statsStartDate => _statsStartDate;
+  DateTime? get statsEndDate => _statsEndDate;
 
   Future<OrderModel?> createOrder({
     required UserModel user,
@@ -133,7 +139,10 @@ Future<void> loadStatistics() async {
 
   try {
     final statisticsService = StatisticsService();
-    final data = await statisticsService.loadStatistics();
+    final data = await statisticsService.loadStatistics(
+      startDate: _statsStartDate,
+      endDate: _statsEndDate,
+    );
 
     _statistics = data;
 
@@ -145,6 +154,7 @@ Future<void> loadStatistics() async {
             })
         .toList();
   } catch (e) {
+    print('❌ OrderProvider error: $e');
     _error = e.toString();
     _statistics = null;
     _chartData = [];
@@ -153,6 +163,20 @@ Future<void> loadStatistics() async {
   _isLoading = false;
   notifyListeners();
 }
+
+  void setStatsDateRange(DateTime? startDate, DateTime? endDate) {
+    _statsStartDate = startDate;
+    _statsEndDate = endDate;
+    notifyListeners();
+    loadStatistics();
+  }
+
+  void clearStatsDateRange() {
+    _statsStartDate = null;
+    _statsEndDate = null;
+    notifyListeners();
+    loadStatistics();
+  }
 
 
   void clearError() {
