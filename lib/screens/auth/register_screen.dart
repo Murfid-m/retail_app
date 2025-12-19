@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../user/home_screen.dart';
+import 'code_verification_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -32,11 +32,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  bool _isSubmitting = false; // Prevent double submit
+
   Future<void> _register() async {
+    if (_isSubmitting) return; // Prevent double click
+    
     if (_formKey.currentState!.validate()) {
+      setState(() => _isSubmitting = true);
+      
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-      final success = await authProvider.signUp(
+      final result = await authProvider.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         name: _nameController.text.trim(),
@@ -44,16 +50,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
         address: _addressController.text.trim(),
       );
 
-      if (success && mounted) {
-        // Direct login - go to home screen
-        Navigator.pushAndRemoveUntil(
+      if (result['success'] == true && mounted) {
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Kode verifikasi telah dikirim'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Navigate to code verification screen
+        Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-          (route) => false,
+          MaterialPageRoute(
+            builder: (context) => CodeVerificationScreen(
+              email: _emailController.text.trim(),
+              password: _passwordController.text,
+            ),
+          ),
         );
       } else if (mounted) {
+        setState(() => _isSubmitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(authProvider.error ?? 'Registrasi gagal')),
+          SnackBar(
+            content: Text(result['message'] ?? authProvider.error ?? 'Registrasi gagal'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }

@@ -5,6 +5,8 @@ import '../models/user_model.dart';
 import '../services/order_service.dart';
 import '../services/statistics_service.dart';
 
+
+
 class OrderProvider with ChangeNotifier {
   final OrderService _orderService = OrderService();
 
@@ -15,19 +17,18 @@ class OrderProvider with ChangeNotifier {
   String? _error;
   Map<String, dynamic>? _statistics;
   List<Map<String, dynamic>> _chartData = [];
-
+  
   // Filter properties
   String? _selectedStatus;
   String _searchQuery = '';
   DateTime? _startDate;
   DateTime? _endDate;
+  
+  // Statistics date range
+  DateTime? _statsStartDate;
+  DateTime? _statsEndDate;
 
-  List<OrderModel> get orders =>
-      _filteredOrders.isEmpty &&
-          _searchQuery.isEmpty &&
-          _selectedStatus == null &&
-          _startDate == null &&
-          _endDate == null
+  List<OrderModel> get orders => _filteredOrders.isEmpty && _searchQuery.isEmpty && _selectedStatus == null && _startDate == null && _endDate == null
       ? _orders
       : _filteredOrders;
   List<OrderModel> get userOrders => _userOrders;
@@ -39,6 +40,8 @@ class OrderProvider with ChangeNotifier {
   String get searchQuery => _searchQuery;
   DateTime? get startDate => _startDate;
   DateTime? get endDate => _endDate;
+  DateTime? get statsStartDate => _statsStartDate;
+  DateTime? get statsEndDate => _statsEndDate;
 
   Future<OrderModel?> createOrder({
     required UserModel user,
@@ -104,7 +107,7 @@ class OrderProvider with ChangeNotifier {
   Future<void> updateOrderStatus(String orderId, String status) async {
     try {
       await _orderService.updateOrderStatus(orderId, status);
-
+      
       // Update local list
       final index = _orders.indexWhere((o) => o.id == orderId);
       if (index != -1) {
@@ -129,34 +132,52 @@ class OrderProvider with ChangeNotifier {
     }
   }
 
-  Future<void> loadStatistics() async {
-    _isLoading = true;
-    notifyListeners();
+Future<void> loadStatistics() async {
+  _isLoading = true;
+  _error = null;
+  notifyListeners();
 
-    try {
-      final statisticsService = StatisticsService();
-      final data = await statisticsService.loadStatistics();
+  try {
+    final statisticsService = StatisticsService();
+    final data = await statisticsService.loadStatistics(
+      startDate: _statsStartDate,
+      endDate: _statsEndDate,
+    );
 
-      _statistics = data;
+    _statistics = data;
 
-      // Map last_7_days (from JSON) to chartData
-      _chartData = (data['last_7_days'] as List)
-          .map<Map<String, dynamic>>(
-            (e) => {
-              'date': e['date'] ?? e['month'] ?? e['date'],
+    // Ambil last_7_days untuk chart
+    _chartData = (data['last_7_days'] as List)
+        .map<Map<String, dynamic>>((e) => {
+              'date': e['date'],
               'sales': (e['sales'] as num).toDouble(),
-            },
-          )
-          .toList();
-
-      _isLoading = false;
-      notifyListeners();
-    } catch (e) {
-      _error = e.toString();
-      _isLoading = false;
-      notifyListeners();
-    }
+            })
+        .toList();
+  } catch (e) {
+    print('❌ OrderProvider error: $e');
+    _error = e.toString();
+    _statistics = null;
+    _chartData = [];
   }
+
+  _isLoading = false;
+  notifyListeners();
+}
+
+  void setStatsDateRange(DateTime? startDate, DateTime? endDate) {
+    _statsStartDate = startDate;
+    _statsEndDate = endDate;
+    notifyListeners();
+    loadStatistics();
+  }
+
+  void clearStatsDateRange() {
+    _statsStartDate = null;
+    _statsEndDate = null;
+    notifyListeners();
+    loadStatistics();
+  }
+
 
   void clearError() {
     _error = null;
@@ -188,41 +209,29 @@ class OrderProvider with ChangeNotifier {
 
     if (_selectedStatus != null && _selectedStatus!.isNotEmpty) {
       _filteredOrders = _filteredOrders
-          .where(
-            (o) => o.status.toLowerCase() == _selectedStatus!.toLowerCase(),
-          )
+          .where((o) => o.status.toLowerCase() == _selectedStatus!.toLowerCase())
           .toList();
     }
 
     if (_searchQuery.isNotEmpty) {
       _filteredOrders = _filteredOrders
-          .where(
-            (o) =>
-                o.userName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                o.userEmail.toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                ) ||
-                o.userPhone.contains(_searchQuery) ||
-                o.id.toLowerCase().contains(_searchQuery.toLowerCase()),
-          )
+          .where((o) => 
+              o.userName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              o.userEmail.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              o.userPhone.contains(_searchQuery) ||
+              o.id.toLowerCase().contains(_searchQuery.toLowerCase()))
           .toList();
     }
 
     if (_startDate != null) {
       _filteredOrders = _filteredOrders
-          .where(
-            (o) =>
-                o.createdAt.isAfter(_startDate!) ||
-                o.createdAt.isAtSameMomentAs(_startDate!),
-          )
+          .where((o) => o.createdAt.isAfter(_startDate!) || o.createdAt.isAtSameMomentAs(_startDate!))
           .toList();
     }
 
     if (_endDate != null) {
       _filteredOrders = _filteredOrders
-          .where(
-            (o) => o.createdAt.isBefore(_endDate!.add(const Duration(days: 1))),
-          )
+          .where((o) => o.createdAt.isBefore(_endDate!.add(const Duration(days: 1))))
           .toList();
     }
   }

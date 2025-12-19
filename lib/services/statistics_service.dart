@@ -1,130 +1,146 @@
-import 'dart:convert';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class StatisticsService {
-  /// Load statistics from the bundled JSON asset `data/dashboard_summary.json`.
-  Future<Map<String, dynamic>> loadStatistics() async {
+  final _supabase = Supabase.instance.client;
+
+  Future<Map<String, dynamic>> loadStatistics({DateTime? startDate, DateTime? endDate}) async {
     try {
-      final jsonStr = await rootBundle.loadString(
-        'data/dashboard_summary.json',
-      );
-      final Map<String, dynamic> data =
-          json.decode(jsonStr) as Map<String, dynamic>;
+      print('📊 StatisticsService: Loading statistics...');
+      
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final startOfWeek = today.subtract(Duration(days: today.weekday - 1));
+      final startOfMonth = DateTime(now.year, now.month, 1);
+      final last7Days = today.subtract(const Duration(days: 6));
 
-      // Normalize monthly trend
-      final monthlyRaw = data['monthly_sales_trend'] as List<dynamic>? ?? [];
-      final monthly = monthlyRaw
-          .map<Map<String, dynamic>>(
-            (e) => {
-              'month': e['month'],
-              'sales': (e['sales'] as num).toDouble(),
-            },
-          )
-          .toList();
+      print('📅 Today: $today');
+      print('📅 Week start: $startOfWeek');
+      print('📅 Month start: $startOfMonth');
 
-      // Build last 7 days data:
-      // - If JSON already contains 'last_7_days', prefer and normalize it.
-      // - Otherwise, approximate from the most recent monthly entry by
-      //   evenly distributing that month's sales across its days and
-      //   taking the last 7 calendar days of that month.
-      List<Map<String, dynamic>> last7 = [];
-      if (data.containsKey('last_7_days') && data['last_7_days'] is List) {
-        final rawLast7 = data['last_7_days'] as List<dynamic>;
-        for (var item in rawLast7) {
-          try {
-            final dateRaw = (item is Map && item['date'] != null) ? item['date'].toString() : item.toString();
-            String isoDate;
-            if (dateRaw.length == 10 && dateRaw[4] == '-' && dateRaw[7] == '-') {
-              isoDate = dateRaw;
-            } else if (dateRaw.length == 7 && dateRaw[4] == '-') {
-              isoDate = '${dateRaw}-01';
-            } else {
-              isoDate = DateTime.now().toIso8601String().split('T').first;
-            }
+      // Get all orders (not just completed)
+      var query = _supabase
+          .from('orders')
+          .select('created_at, total_amount, status');
+      
+      // Apply date range if provided
+      if (startDate != null && endDate != null) {
+        final start = DateTime(startDate.year, startDate.month, startDate.day);
+        final end = DateTime(endDate.year, endDate.month, endDate.day, 23, 59, 59);
+        query = query.gte('created_at', start.toIso8601String()).lte('created_at', end.toIso8601String());
+        print('📅 Custom range: $start to $end');
+      }
+      
+      final ordersResponse = await query.order('created_at', ascending: false);
 
-            final sales = (item is Map && item['sales'] != null) ? (item['sales'] as num).toDouble() : 0.0;
-            last7.add({'date': isoDate, 'sales': sales});
-          } catch (_) {
-            // ignore malformed entries
+      final orders = ordersResponse as List;
+      
+      print('📦 Total orders fetched: ${orders.length}');
+      if (orders.isNotEmpty) {
+        print('📦 Sample order: ${orders[0]}');
+        // Show all unique statuses
+        final statuses = orders.map((o) => o['status']).toSet();
+        print('📦 Unique statuses in database: $statuses');
+      }
+
+      // Calculate statistics (exclude cancelled orders)
+      double dailySales = 0;
+      int dailyCount = 0;
+      double weeklySales = 0;
+      int weeklyCount = 0;
+      double monthlySales = 0;
+      int monthlyCount = 0;
+      double totalSales = 0;
+      int totalCount = 0;
+
+      // Map for last 7 days data
+      Map<String, double> last7DaysData = {};
+      for (int i = 0; i < 7; i++) {
+        final date = today.subtract(Duration(days: 6 - i));
+        final dateKey = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+        last7DaysData[dateKey] = 0.0;
+      }
+
+      for (var order in orders) {
+        // Skip cancelled orders
+        final status = order['status']?.toString().toLowerCase() ?? '';
+        if (status == 'cancelled' || status == 'canceled') {
+          continue;
+        }
+
+        final createdAt = DateTime.parse(order['created_at']);
+        final amount = (order['total_amount'] as num?)?.toDouble() ?? 0.0;
+        
+        totalSales += amount;
+        totalCount++;
+
+        // Daily
+        if (createdAt.year == today.year && 
+            createdAt.month == today.month && 
+            createdAt.day == today.day) {
+          dailySales += amount;
+          dailyCount++;
+        }
+
+        // Weekly
+        if (createdAt.isAfter(startOfWeek.subtract(const Duration(seconds: 1)))) {
+          weeklySales += amount;
+          weeklyCount++;
+        }
+
+        // Monthly
+        if (createdAt.isAfter(startOfMonth.subtract(const Duration(seconds: 1)))) {
+          monthlySales += amount;
+          monthlyCount++;
+        }
+
+        // Last 7 days chart data
+        if (createdAt.isAfter(last7Days.subtract(const Duration(seconds: 1)))) {
+          final dateKey = '${createdAt.year}-${createdAt.month.toString().padLeft(2, '0')}-${createdAt.day.toString().padLeft(2, '0')}';
+          if (last7DaysData.containsKey(dateKey)) {
+            last7DaysData[dateKey] = last7DaysData[dateKey]! + amount;
           }
         }
       }
 
-      if (last7.isEmpty) {
-        // approximate using average per-day from the most recent monthly entry
-        double avgPerDay = 0.0;
-        if (monthly.isNotEmpty) {
-          final lastMonth = monthly.last;
-          final monthRaw = (lastMonth['month'] as String?) ?? '';
-          int year = DateTime.now().year;
-          int month = DateTime.now().month;
-          try {
-            final parts = monthRaw.split('-');
-            if (parts.length >= 2) {
-              year = int.parse(parts[0]);
-              month = int.parse(parts[1]);
-            }
-          } catch (_) {}
+      print('💰 Statistics calculated:');
+      print('   Daily: Rp $dailySales ($dailyCount orders)');
+      print('   Weekly: Rp $weeklySales ($weeklyCount orders)');
+      print('   Monthly: Rp $monthlySales ($monthlyCount orders)');
+      print('   Total: Rp $totalSales ($totalCount orders)');
 
-          final daysInMonth = DateTime(year, month + 1, 1).subtract(const Duration(days: 1)).day;
-          final monthSales = (lastMonth['sales'] as num).toDouble();
-          avgPerDay = daysInMonth > 0 ? (monthSales / daysInMonth) : 0.0;
-        }
-
-        final today = DateTime.now();
-        last7 = List.generate(7, (i) {
-          final d = today.subtract(Duration(days: 6 - i));
-          return {'date': d.toIso8601String().split('T').first, 'sales': avgPerDay};
-        });
-      }
-
-      // Compute daily and weekly summaries from last7
-      final todayStr = DateTime.now().toIso8601String().split('T').first;
-      double dailySales = 0.0;
-      double weeklySales = 0.0;
-      int weeklyCount = 0;
-      for (var item in last7) {
-        final sales = (item['sales'] as num).toDouble();
-        weeklySales += sales;
-        if ((item['date'] as String) == todayStr) {
-          dailySales = sales;
-        }
-      }
-      weeklyCount = last7.length;
-
-      // Try to infer monthly sales from monthly trend (if available)
-      double monthlySales = 0.0;
-      int monthlyCount = 0;
-      final now = DateTime.now();
-      final currentMonthKey = '${now.year}-${now.month.toString().padLeft(2, '0')}';
-      for (var m in monthly) {
-        if ((m['month'] as String).startsWith(currentMonthKey)) {
-          monthlySales = (m['sales'] as num).toDouble();
-          // count unknown in JSON; leave as 0
-          monthlyCount = 0;
-          break;
-        }
-      }
+      // Convert last 7 days data to chart format
+      final chartData = last7DaysData.entries.map((e) => {
+        'date': e.key,
+        'sales': e.value,
+      }).toList();
 
       return {
-        'daily': {'sales': dailySales, 'count': 0},
-        'weekly': {'sales': weeklySales, 'count': weeklyCount},
-        'monthly': {'sales': monthlySales, 'count': monthlyCount},
-        'total': {
-          'sales': (data['total_sales'] as num?)?.toDouble() ?? 0.0,
-          'count': 0,
+        'daily': {
+          'sales': dailySales,
+          'count': dailyCount,
         },
-        'sales_by_category': data['sales_by_category'] ?? {},
-        'top_products': data['top_products'] ?? [],
-        'monthly_sales_trend': monthly,
-        'last_7_days': last7,
+        'weekly': {
+          'sales': weeklySales,
+          'count': weeklyCount,
+        },
+        'monthly': {
+          'sales': monthlySales,
+          'count': monthlyCount,
+        },
+        'total': {
+          'sales': totalSales,
+          'count': totalCount,
+        },
+        'last_7_days': chartData,
       };
     } catch (e) {
+      print('❌ Error loading statistics: $e');
+      // Return safe defaults if query fails
       return {
-        'total': {'sales': 0.0},
-        'sales_by_category': {},
-        'top_products': [],
-        'monthly_sales_trend': [],
+        'daily': {'sales': 0.0, 'count': 0},
+        'weekly': {'sales': 0.0, 'count': 0},
+        'monthly': {'sales': 0.0, 'count': 0},
+        'total': {'sales': 0.0, 'count': 0},
         'last_7_days': [],
       };
     }

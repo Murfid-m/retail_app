@@ -6,6 +6,7 @@ import '../auth/login_screen.dart';
 import 'product_management_screen.dart';
 import 'order_management_screen.dart';
 import 'statistics_screen.dart';
+import 'low_stock_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -21,6 +22,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     ProductManagementScreen(),
     OrderManagementScreen(),
     StatisticsScreen(),
+    LowStockScreen(),
   ];
 
   @override
@@ -120,6 +122,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 });
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.warning_amber_outlined),
+              title: const Text('Stok Rendah'),
+              selected: _currentIndex == 3,
+              onTap: () {
+                Navigator.pop(context);
+                setState(() {
+                  _currentIndex = 3;
+                });
+              },
+            ),
             const Divider(),
             Consumer<ThemeProvider>(
               builder: (context, themeProvider, child) {
@@ -179,6 +192,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             icon: Icon(Icons.bar_chart_outlined),
             selectedIcon: Icon(Icons.bar_chart),
             label: 'Statistik',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.warning_amber_outlined),
+            selectedIcon: Icon(Icons.warning_amber),
+            label: 'Stok Rendah',
           ),
         ],
       ),
