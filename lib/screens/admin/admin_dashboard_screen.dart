@@ -22,58 +22,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     ProductManagementScreen(),
     OrderManagementScreen(),
     StatisticsScreen(),
-    LowStockScreen(),
   ];
-
-  void _showThemeDialog(BuildContext context, ThemeProvider themeProvider) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Pilih Tema'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            RadioListTile<ThemePreference>(
-              title: const Text('Ikuti Perangkat'),
-              subtitle: const Text('Otomatis sesuai pengaturan sistem'),
-              value: ThemePreference.system,
-              groupValue: themeProvider.themePreference,
-              onChanged: (value) {
-                themeProvider.setThemePreference(value!);
-                Navigator.pop(context);
-              },
-            ),
-            RadioListTile<ThemePreference>(
-              title: const Text('Mode Terang'),
-              subtitle: const Text('Selalu tampilan terang'),
-              value: ThemePreference.light,
-              groupValue: themeProvider.themePreference,
-              onChanged: (value) {
-                themeProvider.setThemePreference(value!);
-                Navigator.pop(context);
-              },
-            ),
-            RadioListTile<ThemePreference>(
-              title: const Text('Mode Gelap'),
-              subtitle: const Text('Selalu tampilan gelap'),
-              value: ThemePreference.dark,
-              groupValue: themeProvider.themePreference,
-              onChanged: (value) {
-                themeProvider.setThemePreference(value!);
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-        ],
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -252,6 +201,47 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             label: 'Stok Rendah',
           ),
         ],
+      ),
+    );
+  }
+
+  void _showThemeDialog(BuildContext context, ThemeProvider themeProvider) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Pilih Tema'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.brightness_auto),
+              title: const Text('Ikuti Perangkat'),
+              selected: themeProvider.themePreference == ThemePreference.system,
+              onTap: () {
+                themeProvider.setThemePreference(ThemePreference.system);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.light_mode),
+              title: const Text('Mode Terang'),
+              selected: themeProvider.themePreference == ThemePreference.light,
+              onTap: () {
+                themeProvider.setThemePreference(ThemePreference.light);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.dark_mode),
+              title: const Text('Mode Gelap'),
+              selected: themeProvider.themePreference == ThemePreference.dark,
+              onTap: () {
+                themeProvider.setThemePreference(ThemePreference.dark);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
