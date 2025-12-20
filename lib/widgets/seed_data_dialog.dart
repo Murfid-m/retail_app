@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/statistics_service.dart';
 
 class SeedDataDialog extends StatefulWidget {
   const SeedDataDialog({super.key});
@@ -12,9 +13,76 @@ class SeedDataDialog extends StatefulWidget {
 
 class _SeedDataDialogState extends State<SeedDataDialog> {
   bool _isSeeding = false;
+  bool _isDeleting = false;
   String _status = '';
   int _progress = 0;
   int _total = 0;
+
+  Future<void> _deleteSeededData() async {
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus Data Seed?'),
+        content: const Text(
+          'Ini akan menghapus semua data order testing yang di-seed sebelumnya.\n\n'
+          'Data yang akan dihapus:\n'
+          '• Orders dengan nama "Customer..."\n'
+          '• Orders dengan nama "Sample..."\n'
+          '• Orders dengan email "@example.com"\n\n'
+          'Data order asli tidak akan terpengaruh.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() {
+      _isDeleting = true;
+      _status = 'Menghapus data seed...';
+    });
+
+    try {
+      final statisticsService = StatisticsService();
+      final success = await statisticsService.deleteSeededData();
+
+      if (success) {
+        setState(() {
+          _status = '✅ Data seed berhasil dihapus!';
+          _isDeleting = false;
+        });
+
+        await Future.delayed(const Duration(seconds: 2));
+        if (mounted) {
+          Navigator.pop(context, true);
+        }
+      } else {
+        setState(() {
+          _status = '❌ Gagal menghapus data';
+          _isDeleting = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _status = '❌ Error: $e';
+        _isDeleting = false;
+      });
+    }
+  }
 
   Future<void> _seedData() async {
     setState(() {
@@ -37,43 +105,53 @@ class _SeedDataDialogState extends State<SeedDataDialog> {
 
       final userId = adminResponse['id'];
 
-      // Read dashboard_summary.json
+      // Read dashboard_data.json (dataset lebih lengkap dengan daily_sales)
       setState(() => _status = 'Membaca data...');
-      final jsonString = await rootBundle.loadString('data/dashboard_summary.json');
+      final jsonString = await rootBundle.loadString('data/dashboard_data.json');
       final jsonData = jsonDecode(jsonString);
-      final monthlyData = jsonData['monthly_sales_trend'] as List;
-
-      _total = monthlyData.length + 25; // all months + current month + today
-
-      // Process ALL historical data from JSON (2015-2018)
-      setState(() => _status = 'Membuat data historis...');
       
-      for (var monthData in monthlyData) {
-        final month = monthData['month'] as String;
-        final sales = (monthData['sales'] as num).toDouble();
+      // Gunakan daily_sales untuk data yang lebih akurat
+      final dailySales = jsonData['daily_sales'] as List;
+      
+      _total = dailySales.length + 25; // all daily data + recent data
 
-        setState(() {
-          _status = 'Processing $month...';
-          _progress++;
-        });
+      // Process daily sales data dari JSON (2015-2018)
+      setState(() => _status = 'Membuat data historis dari daily_sales...');
+      
+      int batchCount = 0;
+      for (var dayData in dailySales) {
+        final date = dayData['date'] as String;
+        final sales = (dayData['sales'] as num).toDouble();
 
-        // Generate 3-5 orders per month
-        final orderCount = 4;
+        // Update status setiap 100 entries
+        if (batchCount % 100 == 0) {
+          setState(() {
+            _status = 'Processing $date... (${batchCount}/${dailySales.length})';
+            _progress = (batchCount * 48 / dailySales.length).round();
+          });
+        }
+        batchCount++;
+
+        // Generate 1-3 orders per day based on sales amount
+        int orderCount = 1;
+        if (sales > 5000) orderCount = 2;
+        if (sales > 15000) orderCount = 3;
+        
         final avgOrderValue = sales / orderCount;
 
         for (int i = 0; i < orderCount; i++) {
-          final orderValue = avgOrderValue * (0.8 + (i * 0.2));
-          final randomDay = (i * 28 / orderCount).round() + 1;
+          final orderValue = avgOrderValue * (0.9 + (i * 0.1));
+          final hour = 9 + (i * 3); // Orders at 9am, 12pm, 3pm
 
           await supabase.from('orders').insert({
             'user_id': userId,
-            'user_name': 'Sample Customer ${_progress}-${i + 1}',
-            'user_phone': '0812345678${(_progress * 10 + i) % 100}'.padRight(12, '0'),
-            'user_email': 'customer${_progress}${i + 1}@example.com',
+            'user_name': 'Customer $date-${i + 1}',
+            'user_phone': '0812345678${(batchCount * 10 + i) % 100}'.padRight(12, '0'),
+            'user_email': 'customer_${date.replaceAll('-', '')}_${i + 1}@example.com',
             'shipping_address': 'Jakarta, Indonesia',
             'total_amount': orderValue,
             'status': 'completed',
-            'created_at': '$month-${randomDay.toString().padLeft(2, '0')}T${10 + i}:00:00Z',
+            'created_at': '${date}T${hour.toString().padLeft(2, '0')}:00:00Z',
           });
         }
       }
@@ -138,18 +216,44 @@ class _SeedDataDialogState extends State<SeedDataDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isProcessing = _isSeeding || _isDeleting;
+    
     return AlertDialog(
-      title: const Text('Seed Data Statistik'),
+      title: const Text('Data Seed Statistik'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Ini akan membuat data order dummy untuk testing statistik.',
+            'Kelola data order dummy untuk testing statistik.',
             style: TextStyle(fontSize: 14),
           ),
           const SizedBox(height: 16),
-          if (_isSeeding) ...[
+          
+          // Info box
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue[200]!),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Data seed menggunakan daily_sales dari dashboard_data.json (2015-2018)',
+                    style: TextStyle(fontSize: 12, color: Colors.blue),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          if (isProcessing) ...[
             LinearProgressIndicator(
               value: _total > 0 ? _progress / _total : null,
             ),
@@ -188,20 +292,33 @@ class _SeedDataDialogState extends State<SeedDataDialog> {
         ],
       ),
       actions: [
-        if (!_isSeeding)
+        if (!isProcessing)
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
+            child: const Text('Tutup'),
           ),
-        if (!_isSeeding && !_status.startsWith('✅'))
-          ElevatedButton(
+        if (!isProcessing && !_status.startsWith('✅')) ...[
+          // Delete button
+          OutlinedButton.icon(
+            onPressed: _deleteSeededData,
+            icon: const Icon(Icons.delete_outline, size: 18),
+            label: const Text('Hapus Seed'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.red,
+              side: const BorderSide(color: Colors.red),
+            ),
+          ),
+          // Seed button
+          ElevatedButton.icon(
             onPressed: _seedData,
+            icon: const Icon(Icons.add_chart, size: 18),
+            label: const Text('Seed Data'),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFFC20E),
               foregroundColor: Colors.black,
             ),
-            child: const Text('Mulai Seed'),
           ),
+        ],
       ],
     );
   }
