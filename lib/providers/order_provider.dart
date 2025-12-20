@@ -19,7 +19,7 @@ class OrderProvider with ChangeNotifier {
   List<Map<String, dynamic>> _chartData = [];
   
   // Filter properties
-  String? _selectedStatus;
+  Set<String> _selectedStatuses = <String>{};
   String _searchQuery = '';
   DateTime? _startDate;
   DateTime? _endDate;
@@ -28,7 +28,7 @@ class OrderProvider with ChangeNotifier {
   DateTime? _statsStartDate;
   DateTime? _statsEndDate;
 
-  List<OrderModel> get orders => _filteredOrders.isEmpty && _searchQuery.isEmpty && _selectedStatus == null && _startDate == null && _endDate == null
+  List<OrderModel> get orders => _filteredOrders.isEmpty && _searchQuery.isEmpty && _selectedStatuses.isEmpty && _startDate == null && _endDate == null
       ? _orders
       : _filteredOrders;
   List<OrderModel> get userOrders => _userOrders;
@@ -36,10 +36,13 @@ class OrderProvider with ChangeNotifier {
   String? get error => _error;
   Map<String, dynamic>? get statistics => _statistics;
   List<Map<String, dynamic>> get chartData => _chartData;
-  String? get selectedStatus => _selectedStatus;
+  Set<String> get selectedStatuses => _selectedStatuses;
   String get searchQuery => _searchQuery;
   DateTime? get startDate => _startDate;
   DateTime? get endDate => _endDate;
+  
+  // Backward compatibility getter
+  String? get selectedStatus => _selectedStatuses.isEmpty ? null : _selectedStatuses.first;
   DateTime? get statsStartDate => _statsStartDate;
   DateTime? get statsEndDate => _statsEndDate;
 
@@ -186,7 +189,25 @@ Future<void> loadStatistics() async {
 
   // Filtering methods
   void filterByStatus(String? status) {
-    _selectedStatus = status;
+    if (status == null) {
+      _selectedStatuses.clear();
+    } else {
+      if (_selectedStatuses.contains(status)) {
+        _selectedStatuses.remove(status); // Toggle off if already selected
+      } else {
+        _selectedStatuses.add(status); // Add if not selected
+      }
+    }
+    _applyFilters();
+    notifyListeners();
+  }
+  
+  void toggleStatusFilter(String status) {
+    if (_selectedStatuses.contains(status)) {
+      _selectedStatuses.remove(status);
+    } else {
+      _selectedStatuses.add(status);
+    }
     _applyFilters();
     notifyListeners();
   }
@@ -207,9 +228,9 @@ Future<void> loadStatistics() async {
   void _applyFilters() {
     _filteredOrders = _orders;
 
-    if (_selectedStatus != null && _selectedStatus!.isNotEmpty) {
+    if (_selectedStatuses.isNotEmpty) {
       _filteredOrders = _filteredOrders
-          .where((o) => o.status.toLowerCase() == _selectedStatus!.toLowerCase())
+          .where((o) => _selectedStatuses.contains(o.status.toLowerCase()))
           .toList();
     }
 
@@ -237,7 +258,7 @@ Future<void> loadStatistics() async {
   }
 
   void clearFilters() {
-    _selectedStatus = null;
+    _selectedStatuses.clear();
     _searchQuery = '';
     _startDate = null;
     _endDate = null;
