@@ -216,7 +216,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       const SizedBox(height: 24),
 
                       // Sales chart
-                      _buildSalesChart(orderProvider.chartData),
+                      _buildSalesChart(orderProvider.chartData, orderProvider.statistics),
                       const SizedBox(height: 16),
                     ],
                   ),
@@ -331,7 +331,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     );
   }
 
-  Widget _buildSalesChart(List<Map<String, dynamic>> chartData) {
+  Widget _buildSalesChart(List<Map<String, dynamic>> chartData, Map<String, dynamic>? stats) {
     if (chartData.isEmpty) {
       return Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -346,6 +346,25 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         .map((e) => (e['sales'] as double))
         .reduce((a, b) => a > b ? a : b);
 
+    // Determine chart title based on grouping type
+    final groupingType = stats?['chart_grouping'] ?? 'daily';
+    final dateRange = stats?['date_range'];
+    String chartTitle;
+    
+    if (dateRange != null) {
+      final start = DateTime.parse(dateRange['start']);
+      final end = DateTime.parse(dateRange['end']);
+      if (groupingType == 'monthly') {
+        chartTitle = 'Penjualan Bulanan (${DateFormat('MMM yyyy').format(start)} - ${DateFormat('MMM yyyy').format(end)})';
+      } else if (groupingType == 'weekly') {
+        chartTitle = 'Penjualan Mingguan (${DateFormat('dd MMM').format(start)} - ${DateFormat('dd MMM yyyy').format(end)})';
+      } else {
+        chartTitle = 'Penjualan Harian (${DateFormat('dd MMM').format(start)} - ${DateFormat('dd MMM yyyy').format(end)})';
+      }
+    } else {
+      chartTitle = 'Penjualan 7 Hari Terakhir';
+    }
+
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
@@ -353,9 +372,27 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Penjualan 7 Hari Terakhir',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    chartTitle,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+                if (groupingType != 'daily')
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFC20E).withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      groupingType == 'monthly' ? 'Per Bulan' : 'Per Minggu',
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 24),
             SizedBox(
@@ -368,11 +405,13 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     enabled: true,
                     touchTooltipData: BarTouchTooltipData(
                       getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                        final label = chartData[group.x.toInt()]['date'] as String;
                         return BarTooltipItem(
-                          'Rp ${_formatPrice(rod.toY)}',
+                          '$label\nRp ${_formatPrice(rod.toY)}',
                           const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
+                            fontSize: 12,
                           ),
                         );
                       },
@@ -393,13 +432,30 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                           final index = value.toInt();
                           if (index >= 0 && index < chartData.length) {
                             final dateStr = chartData[index]['date'] as String;
-                            final date = DateTime.parse(dateStr);
+                            String label;
+                            
+                            if (groupingType == 'monthly') {
+                              // Format: 2018-01 -> Jan'18
+                              final parts = dateStr.split('-');
+                              final month = int.parse(parts[1]);
+                              final year = parts[0].substring(2);
+                              final monthNames = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
+                              label = "${monthNames[month]}'$year";
+                            } else if (groupingType == 'weekly') {
+                              // Format: 2018-W01 -> W01
+                              label = dateStr.split('-').last;
+                            } else {
+                              // Format: 2018-01-15 -> 15/01
+                              final date = DateTime.parse(dateStr);
+                              label = DateFormat('dd/MM').format(date);
+                            }
+                            
                             return Padding(
                               padding: const EdgeInsets.only(top: 8),
                               child: Text(
-                                DateFormat('dd/MM').format(date),
+                                label,
                                 style: const TextStyle(
-                                  fontSize: 10,
+                                  fontSize: 9,
                                   color: Colors.grey,
                                 ),
                               ),
@@ -439,7 +495,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                         BarChartRodData(
                           toY: entry.value['sales'] as double,
                           color: const Color(0xFFFFC20E),
-                          width: 20,
+                          width: chartData.length > 20 ? 8 : (chartData.length > 10 ? 12 : 20),
                           borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(4),
                           ),

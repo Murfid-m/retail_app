@@ -4,6 +4,7 @@ import '../../models/product_model.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/review_provider.dart';
+import '../../providers/wishlist_provider.dart';
 import '../../widgets/image_carousel.dart';
 import '../../widgets/star_rating.dart';
 import '../../widgets/review_widgets.dart';
@@ -44,7 +45,39 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Detail Produk')),
+      appBar: AppBar(
+        title: const Text('Detail Produk'),
+        actions: [
+          // Wishlist button in app bar
+          Consumer2<WishlistProvider, AuthProvider>(
+            builder: (context, wishlistProvider, authProvider, child) {
+              final isInWishlist = wishlistProvider.isInWishlist(widget.product.id);
+              return IconButton(
+                icon: Icon(
+                  isInWishlist ? Icons.favorite : Icons.favorite_border,
+                  color: isInWishlist ? Colors.red : null,
+                ),
+                onPressed: () {
+                  if (authProvider.user != null) {
+                    wishlistProvider.toggleWishlist(authProvider.user!.id, widget.product);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          isInWishlist 
+                              ? 'Dihapus dari wishlist' 
+                              : 'Ditambahkan ke wishlist',
+                        ),
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
+                  }
+                },
+                tooltip: isInWishlist ? 'Hapus dari wishlist' : 'Tambah ke wishlist',
+              );
+            },
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
