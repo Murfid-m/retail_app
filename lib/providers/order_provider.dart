@@ -201,14 +201,9 @@ class OrderProvider with ChangeNotifier {
 
   // Filtering methods
   void filterByStatus(String? status) {
-    if (status == null) {
-      _selectedStatuses.clear();
-    } else {
-      if (_selectedStatuses.contains(status)) {
-        _selectedStatuses.remove(status); // Toggle off if already selected
-      } else {
-        _selectedStatuses.add(status); // Add if not selected
-      }
+    _selectedStatuses.clear();
+    if (status != null) {
+      _selectedStatuses.add(status);
     }
     _applyFilters();
     notifyListeners();

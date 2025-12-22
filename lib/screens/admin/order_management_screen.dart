@@ -50,32 +50,6 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     return DateFormat('dd MMM yyyy, HH:mm').format(date);
   }
   
-  void _applyDateFilterPreservingStatus(OrderProvider orderProvider, DateTime startDate, DateTime endDate) {
-    // Apply date filter without resetting status filter
-    orderProvider.filterByDateRange(startDate, endDate);
-    
-    // Show confirmation with combined filter info
-    String message = 'Filter diterapkan: ${DateFormat('dd MMM yyyy').format(startDate)}';
-    if (startDate != endDate) {
-      message = 'Filter diterapkan: ${DateFormat('dd MMM').format(startDate)} - ${DateFormat('dd MMM yyyy').format(endDate)}';
-    }
-    
-    if (orderProvider.selectedStatuses.isNotEmpty) {
-      final statusLabels = orderProvider.selectedStatuses
-          .map((status) => _getStatusLabel(status))
-          .toList();
-      message += ' + Status: ${statusLabels.join(', ')}';
-    }
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 2),
-        backgroundColor: Colors.green[600],
-      ),
-    );
-  }
-  
   void _exportOrders(OrderProvider orderProvider) {
     final orders = orderProvider.orders;
     if (orders.isEmpty) {
@@ -185,39 +159,9 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
           child: ListView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: [
-              ..._statusOptions.map((status) {
-                return _buildStatusChip(status, orderProvider);
-              }).toList(),
-              const SizedBox(width: 8),
-              // Quick date filters
-              _buildQuickFilterChip('Hari ini', () {
-                final now = DateTime.now();
-                final today = DateTime(now.year, now.month, now.day);
-                _applyDateFilterPreservingStatus(orderProvider, today, today);
-              }, orderProvider),
-              const SizedBox(width: 8),
-              _buildQuickFilterChip('Minggu ini', () {
-                final now = DateTime.now();
-                final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-                final start = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
-                final end = DateTime(now.year, now.month, now.day);
-                _applyDateFilterPreservingStatus(orderProvider, start, end);
-              }, orderProvider),
-              const SizedBox(width: 8),
-              _buildQuickFilterChip('Bulan ini', () {
-                final now = DateTime.now();
-                final start = DateTime(now.year, now.month, 1);
-                final end = DateTime(now.year, now.month, now.day);
-                _applyDateFilterPreservingStatus(orderProvider, start, end);
-              }, orderProvider),
-              const SizedBox(width: 8),
-              // Date range filter
-              _buildDateRangeChip(orderProvider),
-              const SizedBox(width: 8),
-              // Clear all filters button at the end
-              _buildClearAllFiltersChip(orderProvider),
-            ],
+            children: _statusOptions.map((status) {
+              return _buildStatusChip(status, orderProvider);
+            }).toList(),
           ),
         ),
       ],
@@ -225,147 +169,25 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
   }
 
   Widget _buildStatusChip(String status, OrderProvider orderProvider) {
-    final isSelected = (status == 'Semua Status' && orderProvider.selectedStatuses.isEmpty) ||
-        orderProvider.selectedStatuses.contains(status.toLowerCase());
+    final isSelected = (status == 'Semua Status' && orderProvider.selectedStatus == null) ||
+        orderProvider.selectedStatus == status.toLowerCase();
 
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(
         label: Text(_getStatusLabel(status)),
         selected: isSelected,
-        selectedColor: Theme.of(context).primaryColor,
-        checkmarkColor: Colors.white,
+        showCheckmark: false,
         onSelected: (selected) {
           if (status == 'Semua Status') {
-            orderProvider.filterByStatus(null); // Clear all status filters
+            orderProvider.filterByStatus(null);
           } else {
-            orderProvider.toggleStatusFilter(status.toLowerCase());
+            orderProvider.filterByStatus(status.toLowerCase());
           }
         },
       ),
     );
   }
-
-  Widget _buildDateRangeChip(OrderProvider orderProvider) {
-    final hasDateFilter = orderProvider.startDate != null || orderProvider.endDate != null;
-    
-    String label = 'Filter Tanggal';
-    if (hasDateFilter) {
-      final startDate = orderProvider.startDate!;
-      final endDate = orderProvider.endDate!;
-      if (startDate.year == endDate.year && 
-          startDate.month == endDate.month && 
-          startDate.day == endDate.day) {
-        label = DateFormat('dd MMM yyyy').format(startDate);
-      } else {
-        label = '${DateFormat('dd MMM').format(startDate)} - ${DateFormat('dd MMM yyyy').format(endDate)}';
-      }
-    }
-    
-    return FilterChip(
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.date_range, size: 16, color: hasDateFilter ? Colors.white : null),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: hasDateFilter ? FontWeight.w600 : FontWeight.normal,
-            ),
-          ),
-        ],
-      ),
-      selected: hasDateFilter,
-      selectedColor: Theme.of(context).primaryColor,
-      onSelected: (selected) {
-        if (selected) {
-          _showDateFilterOptions(orderProvider);
-        } else {
-          orderProvider.filterByDateRange(null, null);
-        }
-      },
-    );
-  }
-
-  Widget _buildClearAllFiltersChip(OrderProvider orderProvider) {
-    final hasActiveFilters = orderProvider.startDate != null || 
-                           orderProvider.endDate != null || 
-                           orderProvider.selectedStatuses.isNotEmpty || 
-                           orderProvider.searchQuery.isNotEmpty;
-    
-    return ActionChip(
-      label: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.clear_all, size: 14),
-          SizedBox(width: 4),
-          Text('Dibatalkan', style: TextStyle(fontSize: 12)),
-        ],
-      ),
-      onPressed: hasActiveFilters ? () {
-        orderProvider.clearFilters();
-        _searchController.clear();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Semua filter telah dibatalkan'),
-            duration: Duration(seconds: 1),
-          ),
-        );
-      } : null,
-      backgroundColor: hasActiveFilters ? Colors.red[50] : Colors.grey[100],
-      side: BorderSide(color: hasActiveFilters ? Colors.red[200]! : Colors.grey[300]!),
-      labelStyle: TextStyle(
-        color: hasActiveFilters ? Colors.red[700] : Colors.grey[500],
-      ),
-    );
-  }
-
-  Widget _buildQuickFilterChip(String label, VoidCallback onPressed, OrderProvider orderProvider) {
-    bool isActive = _isQuickFilterActive(label, orderProvider);
-    
-    return ActionChip(
-      label: Text(
-        label,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-          color: isActive ? Colors.white : null,
-        ),
-      ),
-      onPressed: onPressed,
-      backgroundColor: isActive ? Theme.of(context).primaryColor : Colors.grey[100],
-      side: BorderSide(
-        color: isActive ? Theme.of(context).primaryColor : Colors.grey[300]!,
-      ),
-    );
-  }
-  
-  bool _isQuickFilterActive(String label, OrderProvider orderProvider) {
-    if (orderProvider.startDate == null || orderProvider.endDate == null) return false;
-    
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    
-    switch (label) {
-      case 'Hari ini':
-        return orderProvider.startDate!.isAtSameMomentAs(today) && 
-               orderProvider.endDate!.isAtSameMomentAs(today);
-      case 'Minggu ini':
-        final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-        final start = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
-        return orderProvider.startDate!.isAtSameMomentAs(start) && 
-               orderProvider.endDate!.isAtSameMomentAs(today);
-      case 'Bulan ini':
-        final start = DateTime(now.year, now.month, 1);
-        return orderProvider.startDate!.isAtSameMomentAs(start) && 
-               orderProvider.endDate!.isAtSameMomentAs(today);
-      default:
-        return false;
-    }
-  }
-
 
 
   String _getStatusLabel(String status) {
@@ -399,15 +221,9 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     List<String> activeFilters = [];
     
     // Add status filter info
-    if (orderProvider.selectedStatuses.isNotEmpty) {
-      final statusLabels = orderProvider.selectedStatuses
-          .map((status) => _getStatusLabel(status))
-          .toList();
-      if (statusLabels.length == 1) {
-        activeFilters.add('Status: ${statusLabels.first}');
-      } else {
-        activeFilters.add('Status: ${statusLabels.join(', ')}');
-      }
+    if (orderProvider.selectedStatus != null) {
+      final statusLabel = _getStatusLabel(orderProvider.selectedStatus!);
+      activeFilters.add('Status: $statusLabel');
     }
     
     // Add date filter info
@@ -516,124 +332,6 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         ),
       ],
     );
-  }
-
-  Future<void> _showDateFilterOptions(OrderProvider orderProvider) async {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Pilih Filter Tanggal',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              leading: const Icon(Icons.today),
-              title: const Text('Pilih Satu Tanggal'),
-              subtitle: const Text('Filter pesanan untuk hari tertentu'),
-              onTap: () {
-                Navigator.pop(context);
-                _showSingleDatePicker(orderProvider);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.date_range),
-              title: const Text('Pilih Rentang Tanggal'),
-              subtitle: const Text('Filter pesanan dari tanggal A ke tanggal B'),
-              onTap: () {
-                Navigator.pop(context);
-                _showDateRangePicker(orderProvider);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showSingleDatePicker(OrderProvider orderProvider) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: orderProvider.startDate ?? DateTime.now(),
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now(),
-      helpText: 'PILIH TANGGAL',
-      cancelText: 'BATAL',
-      confirmText: 'PILIH',
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: Theme.of(context).primaryColor,
-              onPrimary: Colors.white,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
-      // Set same date for start and end to filter single day
-      orderProvider.filterByDateRange(picked, picked);
-      
-      // Show confirmation
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Filter diterapkan untuk: ${DateFormat('dd MMM yyyy').format(picked)}',
-          ),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
-  }
-
-  Future<void> _showDateRangePicker(OrderProvider orderProvider) async {
-    final DateTimeRange? picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now(),
-      initialDateRange: orderProvider.startDate != null && orderProvider.endDate != null
-          ? DateTimeRange(start: orderProvider.startDate!, end: orderProvider.endDate!)
-          : null,
-      helpText: 'PILIH RENTANG TANGGAL',
-      cancelText: 'BATAL',
-      confirmText: 'SIMPAN',
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: Theme.of(context).primaryColor,
-              onPrimary: Colors.white,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
-      orderProvider.filterByDateRange(picked.start, picked.end);
-      
-      // Show confirmation
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Filter diterapkan: ${DateFormat('dd MMM').format(picked.start)} - ${DateFormat('dd MMM yyyy').format(picked.end)}',
-          ),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
   }
 
   @override
@@ -746,7 +444,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
 
   Widget _buildOrderCard(OrderModel order, OrderProvider orderProvider) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ExpansionTile(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
