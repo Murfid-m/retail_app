@@ -799,20 +799,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFFFFC20E).withOpacity(0.2)
-                        : Colors.green[50],
+                    color: Colors.green[50],
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     'Top ${topProducts.length}',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? const Color(0xFFFFC20E)
-                          : Colors.green[700],
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: TextStyle(fontSize: 10, color: Colors.green[700], fontWeight: FontWeight.w500),
                   ),
                 ),
               ],
@@ -932,6 +924,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
+                color: Colors.grey[50],
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
