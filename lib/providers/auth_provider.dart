@@ -70,7 +70,7 @@ class AuthProvider with ChangeNotifier {
         phone: phone,
         address: address,
       );
-      
+
       _isLoading = false;
       _pendingVerificationEmail = email;
       notifyListeners();
@@ -84,10 +84,7 @@ class AuthProvider with ChangeNotifier {
   }
 
   /// Verify code
-  Future<bool> verifyCode({
-    required String email,
-    required String code,
-  }) async {
+  Future<bool> verifyCode({required String email, required String code}) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -95,11 +92,11 @@ class AuthProvider with ChangeNotifier {
     try {
       final success = await _authService.verifyCode(email: email, code: code);
       _isLoading = false;
-      
+
       if (!success) {
         _error = 'Kode verifikasi salah';
       }
-      
+
       notifyListeners();
       return success;
     } catch (e) {
@@ -167,7 +164,7 @@ class AuthProvider with ChangeNotifier {
       return _user != null;
     } catch (e) {
       final errorMsg = e.toString();
-      
+
       // Check if unverified
       if (errorMsg.contains('UNVERIFIED:')) {
         _pendingVerificationEmail = errorMsg.split('UNVERIFIED:').last;
@@ -175,7 +172,7 @@ class AuthProvider with ChangeNotifier {
       } else {
         _error = errorMsg.replaceAll('Exception: ', '');
       }
-      
+
       _isLoading = false;
       notifyListeners();
       return false;
