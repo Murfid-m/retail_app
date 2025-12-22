@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HelpSupportScreen extends StatelessWidget {
   const HelpSupportScreen({super.key});
@@ -61,12 +62,12 @@ class HelpSupportScreen extends StatelessWidget {
             context,
             icon: Icons.phone,
             title: 'Telepon',
-            value: '+62 812-3456-7890',
-            onTap: () {
-              // TODO: Launch phone dialer
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Membuka aplikasi telepon...')),
-              );
+            value: '+62 895-1334-2070',
+              onTap: () async {
+              final url = Uri.parse('https://tel:+6289513342070');
+              if (await canLaunchUrl(url)) {
+                await launchUrl(url, mode: LaunchMode.externalApplication);
+              }
             },
           ),
           const SizedBox(height: 12),
@@ -74,12 +75,12 @@ class HelpSupportScreen extends StatelessWidget {
             context,
             icon: Icons.message,
             title: 'WhatsApp',
-            value: '+62 812-3456-7890',
-            onTap: () {
-              // TODO: Launch WhatsApp
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Membuka WhatsApp...')),
-              );
+            value: '+62 895-1334-2070',
+            onTap: () async {
+              final url = Uri.parse('https://wa.me/6289513342070');
+              if (await canLaunchUrl(url)) {
+                await launchUrl(url, mode: LaunchMode.externalApplication);
+              }
             },
           ),
           const SizedBox(height: 12),
@@ -87,12 +88,12 @@ class HelpSupportScreen extends StatelessWidget {
             context,
             icon: Icons.email,
             title: 'Email',
-            value: 'support@retailapp.com',
-            onTap: () {
-              // TODO: Launch email
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Membuka aplikasi email...')),
-              );
+            value: 'ussycntka@gmail.com',
+            onTap: () async {
+              final url = Uri.parse('mailto:ussycntka@gmail.com');
+              if (await canLaunchUrl(url)) {
+                await launchUrl(url, mode: LaunchMode.externalApplication);
+              }
             },
           ),
           const SizedBox(height: 32),
