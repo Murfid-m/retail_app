@@ -136,17 +136,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             const Divider(),
             Consumer<ThemeProvider>(
               builder: (context, themeProvider, child) {
-                return SwitchListTile(
-                  secondary: Icon(
-                    themeProvider.isDarkMode
-                        ? Icons.dark_mode
-                        : Icons.light_mode,
+                return ListTile(
+                  leading: Icon(
+                    themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
                   ),
-                  title: const Text('Mode Gelap'),
-                  value: themeProvider.isDarkMode,
-                  onChanged: (value) {
-                    themeProvider.toggleTheme();
-                  },
+                  title: const Text('Tema Aplikasi'),
+                  subtitle: Text(
+                    themeProvider.themePreference == ThemePreference.system
+                        ? 'Ikuti Perangkat'
+                        : themeProvider.themePreference == ThemePreference.dark
+                            ? 'Mode Gelap'
+                            : 'Mode Terang',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  onTap: () => _showThemeDialog(context, themeProvider),
                 );
               },
             ),
@@ -199,6 +202,47 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             label: 'Stok Rendah',
           ),
         ],
+      ),
+    );
+  }
+
+  void _showThemeDialog(BuildContext context, ThemeProvider themeProvider) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Pilih Tema'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.brightness_auto),
+              title: const Text('Ikuti Perangkat'),
+              selected: themeProvider.themePreference == ThemePreference.system,
+              onTap: () {
+                themeProvider.setThemePreference(ThemePreference.system);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.light_mode),
+              title: const Text('Mode Terang'),
+              selected: themeProvider.themePreference == ThemePreference.light,
+              onTap: () {
+                themeProvider.setThemePreference(ThemePreference.light);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.dark_mode),
+              title: const Text('Mode Gelap'),
+              selected: themeProvider.themePreference == ThemePreference.dark,
+              onTap: () {
+                themeProvider.setThemePreference(ThemePreference.dark);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -3,7 +3,13 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/order_provider.dart';
+import '../../providers/review_provider.dart';
 import '../../models/order_model.dart';
+import '../../models/review_model.dart';
+import '../../services/review_service.dart';
+import '../../widgets/skeleton_loading.dart';
+import '../../widgets/star_rating.dart';
+import '../../widgets/review_widgets.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
   const OrderHistoryScreen({super.key});
@@ -13,6 +19,11 @@ class OrderHistoryScreen extends StatefulWidget {
 }
 
 class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
+  final ReviewService _reviewService = ReviewService();
+  // Cache untuk status review per item
+  final Map<String, bool> _reviewedItems = {};
+  final Map<String, ReviewModel?> _existingReviews = {};
+
   @override
   void initState() {
     super.initState();
@@ -25,6 +36,19 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
         ).loadUserOrders(user.id);
       }
     });
+  }
+
+  // Check if item has been reviewed
+  Future<void> _checkItemReviewed(String productId, String userId) async {
+    if (_reviewedItems.containsKey(productId)) return;
+    
+    final review = await _reviewService.getUserReview(productId, userId);
+    if (mounted) {
+      setState(() {
+        _reviewedItems[productId] = review != null;
+        _existingReviews[productId] = review;
+      });
+    }
   }
 
   String _formatPrice(double price) {
@@ -45,7 +69,12 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     return Consumer<OrderProvider>(
       builder: (context, orderProvider, child) {
         if (orderProvider.isLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return ListSkeleton(
+            padding: const EdgeInsets.all(16),
+            itemCount: 5,
+            itemBuilder: (context, index) => const OrderCardSkeleton(),
+            separator: const SizedBox(height: 16),
+          );
         }
 
         if (orderProvider.userOrders.isEmpty) {
@@ -93,6 +122,16 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   }
 
   Widget _buildOrderCard(OrderModel order) {
+    final isDelivered = order.status == OrderStatus.delivered;
+    final user = Provider.of<AuthProvider>(context, listen: false).user;
+    
+    // Check review status for each item if order is delivered
+    if (isDelivered && user != null) {
+      for (var item in order.items) {
+        _checkItemReviewed(item.productId, user.id);
+      }
+    }
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -117,72 +156,10 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
               style: TextStyle(color: Colors.grey[600], fontSize: 12),
             ),
             const Divider(height: 24),
-            ...order.items
-                .take(2)
-                .map(
-                  (item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: item.imageUrl.isNotEmpty
-                                ? Image.network(
-                                    item.imageUrl,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return const Icon(
-                                        Icons.image_not_supported,
-                                        size: 20,
-                                        color: Colors.grey,
-                                      );
-                                    },
-                                  )
-                                : const Icon(Icons.image, size: 20),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item.productName,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              Text(
-                                '${item.quantity}x Rp ${_formatPrice(item.price)}',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-            if (order.items.length > 2)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  '+${order.items.length - 2} produk lainnya',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                ),
-              ),
+            
+            // Show all items with review button for delivered orders
+            ...order.items.map((item) => _buildOrderItem(item, isDelivered, user?.id)),
+            
             const Divider(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -195,7 +172,9 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                   'Rp ${_formatPrice(order.totalAmount)}',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Theme.of(context).primaryColor,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFFFFC20E)
+                        : Theme.of(context).primaryColor,
                   ),
                 ),
               ],
@@ -250,6 +229,202 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
           fontWeight: FontWeight.w500,
         ),
       ),
+    );
+  }
+
+  Widget _buildOrderItem(OrderItem item, bool isDelivered, String? userId) {
+    final isReviewed = _reviewedItems[item.productId] ?? false;
+    final existingReview = _existingReviews[item.productId];
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: item.imageUrl.isNotEmpty
+                  ? Image.network(
+                      item.imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(
+                          Icons.image_not_supported,
+                          size: 24,
+                          color: Colors.grey,
+                        );
+                      },
+                    )
+                  : const Icon(Icons.image, size: 24),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.productName,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${item.quantity}x Rp ${_formatPrice(item.price)}',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                ),
+                // Show existing rating or review button for delivered orders
+                if (isDelivered && userId != null) ...[
+                  const SizedBox(height: 8),
+                  if (isReviewed && existingReview != null)
+                    // Show existing rating
+                    Row(
+                      children: [
+                        StarRating(
+                          rating: existingReview.rating.toDouble(),
+                          size: 14,
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () => _showReviewDialog(
+                            productId: item.productId,
+                            productName: item.productName,
+                            userId: userId,
+                            existingReview: existingReview,
+                          ),
+                          child: Text(
+                            'Edit',
+                            style: TextStyle(
+                              color: Theme.of(context).primaryColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    // Show review button
+                    OutlinedButton.icon(
+                      onPressed: () => _showReviewDialog(
+                        productId: item.productId,
+                        productName: item.productName,
+                        userId: userId,
+                      ),
+                      icon: const Icon(Icons.rate_review_outlined, size: 16),
+                      label: const Text('Beri Ulasan'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        textStyle: const TextStyle(fontSize: 12),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showReviewDialog({
+    required String productId,
+    required String productName,
+    required String userId,
+    ReviewModel? existingReview,
+  }) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(
+            existingReview != null ? 'Edit Ulasan' : 'Beri Ulasan',
+            style: const TextStyle(fontSize: 18),
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Product name
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.shopping_bag_outlined, color: Colors.grey[600]),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            productName,
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Review form (embedded mode)
+                  ReviewFormDialog(
+                    existingReview: existingReview,
+                    isEmbedded: true,
+                    onSubmit: (rating, comment) async {
+                      final reviewProvider = Provider.of<ReviewProvider>(context, listen: false);
+                      final scaffoldMessenger = ScaffoldMessenger.of(context);
+                      final navigator = Navigator.of(dialogContext);
+
+                      final success = await reviewProvider.submitReview(
+                        productId: productId,
+                        userId: userId,
+                        rating: rating,
+                        comment: comment,
+                      );
+
+                      navigator.pop();
+
+                      if (success) {
+                        // Update cache
+                        final newReview = await _reviewService.getUserReview(productId, userId);
+                        if (mounted) {
+                          setState(() {
+                            _reviewedItems[productId] = true;
+                            _existingReviews[productId] = newReview;
+                          });
+                        }
+                        scaffoldMessenger.showSnackBar(
+                          const SnackBar(content: Text('Ulasan berhasil disimpan')),
+                        );
+                      } else {
+                        scaffoldMessenger.showSnackBar(
+                          const SnackBar(content: Text('Gagal menyimpan ulasan')),
+                        );
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

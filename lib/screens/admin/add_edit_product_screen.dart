@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../providers/product_provider.dart';
 import '../../models/product_model.dart';
 import '../../services/product_service.dart';
+import '../../widgets/image_carousel.dart';
 
 class AddEditProductScreen extends StatefulWidget {
   final ProductModel? product;
@@ -22,13 +23,15 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   final _priceController = TextEditingController();
   final _stockController = TextEditingController();
   String _selectedCategory = ProductCategory.kaos;
+  List<String> _selectedSizes = []; // Selected sizes for the product
 
-  // Image related
-  String? _imageUrl;
-  Uint8List? _selectedImageBytes;
-  String? _selectedImageName;
+  // Image related - Multi-image support
+  List<String> _imageUrls = []; // Existing image URLs
+  List<Uint8List> _newImageBytes = []; // New images to upload
+  List<String> _newImageNames = []; // Names for new images
   bool _isUploadingImage = false;
   final ProductService _productService = ProductService();
+  static const int maxImages = 5;
 
   bool get _isEditing => widget.product != null;
 
@@ -40,8 +43,12 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       _descriptionController.text = widget.product!.description;
       _priceController.text = widget.product!.price.toStringAsFixed(0);
       _stockController.text = widget.product!.stock.toString();
-      _imageUrl = widget.product!.imageUrl;
+      _imageUrls = List.from(widget.product!.allImages);
       _selectedCategory = widget.product!.category;
+      _selectedSizes = List.from(widget.product!.availableSizes);
+    } else {
+      // Set default sizes based on initial category
+      _selectedSizes = List.from(ProductModel.getDefaultSizesForCategory(_selectedCategory));
     }
   }
 
@@ -54,7 +61,16 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     super.dispose();
   }
 
+  int get _totalImages => _imageUrls.length + _newImageBytes.length;
+
   Future<void> _pickImage() async {
+    if (_totalImages >= maxImages) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Maksimal $maxImages gambar')),
+      );
+      return;
+    }
+
     try {
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(
@@ -67,8 +83,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       if (image != null) {
         final bytes = await image.readAsBytes();
         setState(() {
-          _selectedImageBytes = bytes;
-          _selectedImageName = image.name;
+          _newImageBytes.add(bytes);
+          _newImageNames.add(image.name);
         });
       }
     } catch (e) {
@@ -80,35 +96,39 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     }
   }
 
-  Future<String?> _uploadImage() async {
-    if (_selectedImageBytes == null) return _imageUrl;
-
+  void _removeExistingImage(int index) {
     setState(() {
-      _isUploadingImage = true;
+      _imageUrls.removeAt(index);
     });
+  }
 
-    try {
-      final fileName =
-          '${DateTime.now().millisecondsSinceEpoch}_$_selectedImageName';
-      final url = await _productService.uploadProductImageBytes(
-        _selectedImageBytes!,
-        fileName,
-      );
-      setState(() {
-        _isUploadingImage = false;
-      });
-      return url;
-    } catch (e) {
-      setState(() {
-        _isUploadingImage = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Gagal upload gambar: $e')));
+  void _removeNewImage(int index) {
+    setState(() {
+      _newImageBytes.removeAt(index);
+      _newImageNames.removeAt(index);
+    });
+  }
+
+  Future<List<String>> _uploadAllNewImages() async {
+    List<String> uploadedUrls = [];
+
+    for (int i = 0; i < _newImageBytes.length; i++) {
+      try {
+        final fileName =
+            '${DateTime.now().millisecondsSinceEpoch}_${_newImageNames[i]}';
+        final url = await _productService.uploadProductImageBytes(
+          _newImageBytes[i],
+          fileName,
+        );
+        if (url != null) {
+          uploadedUrls.add(url);
+        }
+      } catch (e) {
+        print('Error uploading image $i: $e');
       }
-      return null;
     }
+
+    return uploadedUrls;
   }
 
   Widget _buildImagePlaceholder() {
@@ -131,29 +151,316 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     );
   }
 
+  Widget _buildImageGallery() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Image preview section
+        if (_imageUrls.isEmpty && _newImageBytes.isEmpty)
+          GestureDetector(
+            onTap: _pickImage,
+            child: Container(
+              height: 200,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: _buildImagePlaceholder(),
+            ),
+          )
+        else
+          SizedBox(
+            height: 100,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                // Existing images
+                ..._imageUrls.asMap().entries.map((entry) {
+                  return _buildImageThumbnail(
+                    imageWidget: Image.network(
+                      entry.value,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          const Icon(Icons.broken_image),
+                    ),
+                    index: entry.key,
+                    isNew: false,
+                    isPrimary: entry.key == 0 && _newImageBytes.isEmpty,
+                  );
+                }),
+                // New images to upload
+                ..._newImageBytes.asMap().entries.map((entry) {
+                  return _buildImageThumbnail(
+                    imageWidget: Image.memory(
+                      entry.value,
+                      fit: BoxFit.cover,
+                    ),
+                    index: entry.key,
+                    isNew: true,
+                    isPrimary: _imageUrls.isEmpty && entry.key == 0,
+                  );
+                }),
+                // Add more button
+                if (_totalImages < maxImages)
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: Container(
+                      width: 80,
+                      height: 80,
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Theme.of(context).primaryColor,
+                          width: 2,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.add_photo_alternate,
+                        color: Theme.of(context).primaryColor,
+                        size: 32,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        
+        const SizedBox(height: 8),
+        Text(
+          'Gambar: $_totalImages/$maxImages (Gambar pertama = utama)',
+          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildImageThumbnail({
+    required Widget imageWidget,
+    required int index,
+    required bool isNew,
+    required bool isPrimary,
+  }) {
+    return Stack(
+      children: [
+        Container(
+          width: 80,
+          height: 80,
+          margin: const EdgeInsets.only(right: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isPrimary ? Theme.of(context).primaryColor : Colors.grey[300]!,
+              width: isPrimary ? 2 : 1,
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(7),
+            child: imageWidget,
+          ),
+        ),
+        // Remove button
+        Positioned(
+          top: -4,
+          right: 4,
+          child: GestureDetector(
+            onTap: () {
+              if (isNew) {
+                _removeNewImage(index);
+              } else {
+                _removeExistingImage(index);
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.close, color: Colors.white, size: 12),
+            ),
+          ),
+        ),
+        // Primary badge
+        if (isPrimary)
+          Positioned(
+            bottom: 4,
+            left: 4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text(
+                'Utama',
+                style: TextStyle(color: Colors.white, fontSize: 8),
+              ),
+            ),
+          ),
+        // New badge
+        if (isNew)
+          Positioned(
+            top: 4,
+            left: 4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.green,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text(
+                'Baru',
+                style: TextStyle(color: Colors.white, fontSize: 8),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSizeSelector() {
+    final allSizes = ProductModel.getDefaultSizesForCategory(_selectedCategory);
+    final isShoeCategory = _selectedCategory == ProductCategory.sepatu;
+    
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  isShoeCategory ? Icons.straighten : Icons.format_size,
+                  color: const Color(0xFFFFC20E),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  isShoeCategory ? 'Ukuran Sepatu Tersedia' : 'Ukuran Tersedia',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      if (_selectedSizes.length == allSizes.length) {
+                        _selectedSizes.clear();
+                      } else {
+                        _selectedSizes = List.from(allSizes);
+                      }
+                    });
+                  },
+                  child: Text(
+                    _selectedSizes.length == allSizes.length 
+                        ? 'Hapus Semua' 
+                        : 'Pilih Semua',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Pilih ukuran yang tersedia untuk produk ini',
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: allSizes.map((size) {
+                final isSelected = _selectedSizes.contains(size);
+                return InkWell(
+                  onTap: () {
+                    setState(() {
+                      if (isSelected) {
+                        _selectedSizes.remove(size);
+                      } else {
+                        _selectedSizes.add(size);
+                      }
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    constraints: BoxConstraints(
+                      minWidth: isShoeCategory ? 45 : 50,
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFFFFC20E) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isSelected ? const Color(0xFFFFC20E) : Colors.grey[300]!,
+                        width: isSelected ? 2 : 1,
+                      ),
+                    ),
+                    child: Text(
+                      size,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected ? Colors.black : Colors.grey[700],
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Terpilih: ${_selectedSizes.length} ukuran',
+              style: TextStyle(
+                color: _selectedSizes.isEmpty ? Colors.red : Colors.grey[600],
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _saveProduct() async {
     if (_formKey.currentState!.validate()) {
-      // Check if image is required for new product
-      if (!_isEditing &&
-          _selectedImageBytes == null &&
-          (_imageUrl == null || _imageUrl!.isEmpty)) {
+      // Check if at least one image exists
+      if (_totalImages == 0) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Pilih gambar produk terlebih dahulu')),
+          const SnackBar(content: Text('Pilih minimal 1 gambar produk')),
         );
         return;
       }
+
+      setState(() {
+        _isUploadingImage = true;
+      });
 
       final productProvider = Provider.of<ProductProvider>(
         context,
         listen: false,
       );
 
-      // Upload image if new image selected
-      String? finalImageUrl = _imageUrl;
-      if (_selectedImageBytes != null) {
-        finalImageUrl = await _uploadImage();
-        if (finalImageUrl == null) return; // Upload failed
-      }
+      // Upload new images
+      List<String> uploadedUrls = await _uploadAllNewImages();
+      
+      // Combine existing and new image URLs
+      List<String> allImageUrls = [..._imageUrls, ...uploadedUrls];
+      
+      // Primary image is the first one
+      String primaryImageUrl = allImageUrls.isNotEmpty ? allImageUrls.first : '';
+      // Additional images
+      List<String> additionalImages = allImageUrls.length > 1 
+          ? allImageUrls.sublist(1) 
+          : [];
+
+      setState(() {
+        _isUploadingImage = false;
+      });
 
       final product = ProductModel(
         id: widget.product?.id ?? '',
@@ -161,9 +468,13 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         description: _descriptionController.text.trim(),
         price: double.parse(_priceController.text),
         category: _selectedCategory,
-        imageUrl: finalImageUrl ?? '',
+        imageUrl: primaryImageUrl,
+        imageUrls: additionalImages,
         stock: int.parse(_stockController.text),
         createdAt: widget.product?.createdAt ?? DateTime.now(),
+        averageRating: widget.product?.averageRating ?? 0,
+        totalReviews: widget.product?.totalReviews ?? 0,
+        availableSizes: _selectedSizes,
       );
 
       bool success;
@@ -203,67 +514,27 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Image preview with picker
-              GestureDetector(
-                onTap: _isUploadingImage ? null : _pickImage,
-                child: Container(
-                  height: 200,
+              // Multi-image gallery
+              if (_isUploadingImage)
+                Container(
+                  height: 120,
                   decoration: BoxDecoration(
                     color: Colors.grey[200],
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey[300]!),
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: _isUploadingImage
-                        ? const Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                CircularProgressIndicator(),
-                                SizedBox(height: 8),
-                                Text('Mengupload gambar...'),
-                              ],
-                            ),
-                          )
-                        : _selectedImageBytes != null
-                        ? Image.memory(
-                            _selectedImageBytes!,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                          )
-                        : (_imageUrl != null && _imageUrl!.isNotEmpty)
-                        ? Image.network(
-                            _imageUrl!,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            errorBuilder: (context, error, stackTrace) {
-                              return _buildImagePlaceholder();
-                            },
-                          )
-                        : _buildImagePlaceholder(),
+                  child: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 8),
+                        Text('Mengupload gambar...'),
+                      ],
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Upload button
-              OutlinedButton.icon(
-                onPressed: _isUploadingImage ? null : _pickImage,
-                icon: const Icon(Icons.photo_library),
-                label: Text(
-                  _selectedImageBytes != null ||
-                          (_imageUrl != null && _imageUrl!.isNotEmpty)
-                      ? 'Ganti Gambar'
-                      : 'Pilih Gambar',
-                ),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
+                )
+              else
+                _buildImageGallery(),
               const SizedBox(height: 16),
 
               // Name field
@@ -304,10 +575,20 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                 onChanged: (value) {
                   setState(() {
                     _selectedCategory = value ?? ProductCategory.kaos;
+                    // Update sizes when category changes (only if not editing)
+                    if (!_isEditing || _selectedSizes.isEmpty) {
+                      _selectedSizes = List.from(
+                        ProductModel.getDefaultSizesForCategory(_selectedCategory),
+                      );
+                    }
                   });
                 },
               ),
               const SizedBox(height: 16),
+              
+              // Size selector (only for categories that support sizes)
+              if (ProductModel.categorySupportsSizes(_selectedCategory))
+                _buildSizeSelector(),
 
               // Price field
               TextFormField(
@@ -379,6 +660,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                   return ElevatedButton(
                     onPressed: productProvider.isLoading ? null : _saveProduct,
                     style: ElevatedButton.styleFrom(
+                      backgroundColor: _isEditing ? const Color(0xFFFFC20E) : null,
+                      foregroundColor: _isEditing ? Colors.black : null,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),

@@ -53,6 +53,12 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.13.1
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/3f.png"
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -74,7 +80,6 @@ flutter:
 
   assets:
     - data/dashboard_summary.json
-    - data/admin_statistic_dashboard.json
 
   # To add assets to your application, add an assets section, like this:
   # assets:

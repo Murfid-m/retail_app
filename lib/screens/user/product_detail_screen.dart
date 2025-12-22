@@ -2,11 +2,42 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/product_model.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/review_provider.dart';
+import '../../providers/wishlist_provider.dart';
+import '../../widgets/image_carousel.dart';
+import '../../widgets/star_rating.dart';
+import '../../widgets/review_widgets.dart';
 
-class ProductDetailScreen extends StatelessWidget {
+class ProductDetailScreen extends StatefulWidget {
   final ProductModel product;
 
   const ProductDetailScreen({super.key, required this.product});
+
+  @override
+  State<ProductDetailScreen> createState() => _ProductDetailScreenState();
+}
+
+class _ProductDetailScreenState extends State<ProductDetailScreen> {
+  String? _selectedSize;
+  
+  @override
+  void initState() {
+    super.initState();
+    // Set default size if product has sizes
+    if (widget.product.hasSizes && widget.product.availableSizes.isNotEmpty) {
+      _selectedSize = widget.product.availableSizes.first;
+    }
+    // Defer loading to avoid setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadReviews();
+    });
+  }
+
+  Future<void> _loadReviews() async {
+    final reviewProvider = Provider.of<ReviewProvider>(context, listen: false);
+    await reviewProvider.loadProductReviews(widget.product.id);
+  }
 
   String _formatPrice(double price) {
     return price
@@ -20,29 +51,47 @@ class ProductDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Detail Produk')),
+      appBar: AppBar(
+        title: const Text('Detail Produk'),
+        actions: [
+          // Wishlist button in app bar
+          Consumer2<WishlistProvider, AuthProvider>(
+            builder: (context, wishlistProvider, authProvider, child) {
+              final isInWishlist = wishlistProvider.isInWishlist(widget.product.id);
+              return IconButton(
+                icon: Icon(
+                  isInWishlist ? Icons.favorite : Icons.favorite_border,
+                  color: isInWishlist ? Colors.red : null,
+                ),
+                onPressed: () {
+                  if (authProvider.user != null) {
+                    wishlistProvider.toggleWishlist(authProvider.user!.id, widget.product);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          isInWishlist 
+                              ? 'Dihapus dari wishlist' 
+                              : 'Ditambahkan ke wishlist',
+                        ),
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
+                  }
+                },
+                tooltip: isInWishlist ? 'Hapus dari wishlist' : 'Tambah ke wishlist',
+              );
+            },
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Product image
-            Container(
+            // Product images carousel
+            ImageCarousel(
+              images: widget.product.allImages,
               height: 300,
-              width: double.infinity,
-              color: Colors.grey[200],
-              child: product.imageUrl.isNotEmpty
-                  ? Image.network(
-                      product.imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(
-                          Icons.image_not_supported,
-                          size: 100,
-                          color: Colors.grey,
-                        );
-                      },
-                    )
-                  : const Icon(Icons.image, size: 100, color: Colors.grey),
             ),
 
             Padding(
@@ -50,19 +99,50 @@ class ProductDetailScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Category chip
-                  Chip(
-                    label: Text(product.category),
-                    labelStyle: const TextStyle(
-                      color: Color(0xFFFFC20E),
-                      fontWeight: FontWeight.bold,
-                    ),
+                  // Category chip and rating
+                  Row(
+                    children: [
+                      Chip(
+                        label: Text(widget.product.category),
+                        labelStyle: const TextStyle(
+                          color: Color(0xFFFFC20E),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Spacer(),
+                      // Rating display
+                      Consumer<ReviewProvider>(
+                        builder: (context, reviewProvider, _) {
+                          final summary = reviewProvider.ratingSummary;
+                          if (summary.totalReviews > 0) {
+                            return Row(
+                              children: [
+                                StarRating(
+                                  rating: summary.averageRating,
+                                  size: 18,
+                                  showValue: true,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '(${summary.totalReviews})',
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
 
                   // Product name
                   Text(
-                    product.name,
+                    widget.product.name,
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -72,7 +152,7 @@ class ProductDetailScreen extends StatelessWidget {
 
                   // Price
                   Text(
-                    'Rp ${_formatPrice(product.price)}',
+                    'Rp ${_formatPrice(widget.product.price)}',
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -85,24 +165,30 @@ class ProductDetailScreen extends StatelessWidget {
                   Row(
                     children: [
                       Icon(
-                        product.stock > 0
+                        widget.product.stock > 0
                             ? Icons.check_circle_outline
                             : Icons.cancel_outlined,
-                        color: product.stock > 0 ? Colors.green : Colors.red,
+                        color: widget.product.stock > 0 ? Colors.green : Colors.red,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        product.stock > 0
-                            ? 'Stok tersedia (${product.stock})'
+                        widget.product.stock > 0
+                            ? 'Stok tersedia (${widget.product.stock})'
                             : 'Stok habis',
                         style: TextStyle(
-                          color: product.stock > 0 ? Colors.green : Colors.red,
+                          color: widget.product.stock > 0 ? Colors.green : Colors.red,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 24),
+                  
+                  // Size selector (if product has sizes)
+                  if (widget.product.hasSizes) ...[
+                    _buildSizeSelector(),
+                    const SizedBox(height: 24),
+                  ],
 
                   // Description
                   const Text(
@@ -111,122 +197,287 @@ class ProductDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    product.description.isNotEmpty
-                        ? product.description
+                    widget.product.description.isNotEmpty
+                        ? widget.product.description
                         : 'Tidak ada deskripsi',
                     style: TextStyle(color: Colors.grey[600], height: 1.5),
                   ),
+
+                  const SizedBox(height: 32),
+                  const Divider(),
+                  const SizedBox(height: 16),
+
+                  // Reviews Section
+                  _buildReviewsSection(),
                 ],
               ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.2),
-              spreadRadius: 1,
-              blurRadius: 5,
-              offset: const Offset(0, -2),
+      bottomNavigationBar: _buildBottomBar(),
+    );
+  }
+
+  Widget _buildSizeSelector() {
+    final isShoeCategory = widget.product.category == ProductCategory.sepatu;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              isShoeCategory ? 'Pilih Ukuran Sepatu' : 'Pilih Ukuran',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-          ],
-        ),
-        child: Consumer<CartProvider>(
-          builder: (context, cart, child) {
-            final isInCart = cart.isInCart(product.id);
-            final quantity = cart.getQuantity(product.id);
-
-            if (isInCart) {
-              return Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey[300]!),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.remove),
-                            onPressed: () {
-                              cart.decrementQuantity(product.id);
-                            },
-                          ),
-                          Text(
-                            '$quantity',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.add),
-                            onPressed: product.stock > quantity
-                                ? () {
-                                    cart.incrementQuantity(product.id);
-                                  }
-                                : null,
-                          ),
-                        ],
-                      ),
-                    ),
+            const Spacer(),
+            if (_selectedSize != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFC20E).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Ukuran: $_selectedSize',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFFB38A00),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text('Lihat Keranjang'),
-                    ),
-                  ),
-                ],
-              );
-            }
-
-            return ElevatedButton(
-              onPressed: product.stock > 0
-                  ? () {
-                      cart.addToCart(product);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Ditambahkan ke keranjang'),
-                          duration: Duration(seconds: 1),
-                        ),
-                      );
-                    }
-                  : null,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.shopping_cart_outlined),
-                  const SizedBox(width: 8),
-                  Text(
-                    product.stock > 0 ? 'Tambah ke Keranjang' : 'Stok Habis',
+          ],
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: widget.product.availableSizes.map((size) {
+            final isSelected = _selectedSize == size;
+            return InkWell(
+              onTap: () {
+                setState(() {
+                  _selectedSize = size;
+                });
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                constraints: BoxConstraints(
+                  minWidth: isShoeCategory ? 45 : 50,
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isSelected ? const Color(0xFFFFC20E) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isSelected ? const Color(0xFFFFC20E) : Colors.grey[300]!,
+                    width: isSelected ? 2 : 1,
                   ),
-                ],
+                ),
+                child: Text(
+                  size,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected ? Colors.black : Colors.grey[700],
+                  ),
+                ),
               ),
             );
-          },
+          }).toList(),
         ),
+      ],
+    );
+  }
+
+  Widget _buildReviewsSection() {
+    return Consumer<ReviewProvider>(
+      builder: (context, reviewProvider, _) {
+        final reviews = reviewProvider.reviews;
+        final summary = reviewProvider.ratingSummary;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Section header
+            const Text(
+              'Ulasan Produk',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+
+            // Rating Summary
+            if (summary.totalReviews > 0) ...[
+              RatingSummaryCard(
+                averageRating: summary.averageRating,
+                totalReviews: summary.totalReviews,
+                distribution: summary.ratingDistribution,
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Review list (read-only, no edit/delete)
+            if (reviewProvider.isLoading)
+              const Center(child: CircularProgressIndicator())
+            else if (reviews.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(24),
+                alignment: Alignment.center,
+                child: Column(
+                  children: [
+                    Icon(Icons.rate_review_outlined, size: 48, color: Colors.grey[300]),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Belum ada ulasan',
+                      style: TextStyle(color: Colors.grey[500]),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Beli produk ini dan berikan ulasan setelah pesanan selesai',
+                      style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              )
+            else
+              ReviewList(
+                reviews: reviews,
+                currentUserId: null, // No edit/delete in product detail
+                onEdit: null,
+                onDelete: null,
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildBottomBar() {
+    // Check if size selection is required but not selected
+    final requiresSize = widget.product.hasSizes && _selectedSize == null;
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            spreadRadius: 1,
+            blurRadius: 5,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Consumer<CartProvider>(
+        builder: (context, cart, child) {
+          final isInCart = cart.isInCart(widget.product.id, selectedSize: _selectedSize);
+          final quantity = cart.getQuantity(widget.product.id, selectedSize: _selectedSize);
+
+          if (isInCart) {
+            return Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey[300]!),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.remove),
+                          onPressed: () {
+                            cart.decrementQuantity(widget.product.id, selectedSize: _selectedSize);
+                          },
+                        ),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '$quantity',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (_selectedSize != null)
+                              Text(
+                                'Ukuran: $_selectedSize',
+                                style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+                              ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.add),
+                          onPressed: widget.product.stock > quantity
+                              ? () {
+                                  cart.incrementQuantity(widget.product.id, selectedSize: _selectedSize);
+                                }
+                              : null,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Lihat Keranjang'),
+                  ),
+                ),
+              ],
+            );
+          }
+
+          return ElevatedButton(
+            onPressed: widget.product.stock > 0 && !requiresSize
+                ? () {
+                    cart.addToCart(widget.product, selectedSize: _selectedSize);
+                    final sizeMsg = _selectedSize != null ? ' (Ukuran: $_selectedSize)' : '';
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Ditambahkan ke keranjang$sizeMsg'),
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
+                  }
+                : null,
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.shopping_cart_outlined),
+                const SizedBox(width: 8),
+                Text(
+                  widget.product.stock <= 0 
+                      ? 'Stok Habis' 
+                      : requiresSize 
+                          ? 'Pilih Ukuran Dulu' 
+                          : 'Tambah ke Keranjang',
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

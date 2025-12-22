@@ -8,6 +8,9 @@ import 'providers/product_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/order_provider.dart';
 import 'providers/theme_provider.dart';
+import 'providers/review_provider.dart';
+import 'providers/wishlist_provider.dart';
+import 'providers/search_history_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/user/home_screen.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
@@ -28,8 +31,32 @@ void main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangePlatformBrightness() {
+    // Update theme when system brightness changes
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    themeProvider.updateSystemTheme();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,15 +67,16 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => OrderProvider()),
+        ChangeNotifierProvider(create: (_) => ReviewProvider()),
+        ChangeNotifierProvider(create: (_) => WishlistProvider()),
+        ChangeNotifierProvider(create: (_) => SearchHistoryProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
           return MaterialApp(
             title: 'Retail App',
             debugShowCheckedModeBanner: false,
-            themeMode: themeProvider.isDarkMode
-                ? ThemeMode.dark
-                : ThemeMode.light,
+            themeMode: themeProvider.themeMode,
             theme: ThemeData(
               colorScheme: ColorScheme.light(
                 primary: kPrimaryColor,
