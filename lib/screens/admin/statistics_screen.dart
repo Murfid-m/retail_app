@@ -876,7 +876,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       sideTitles: SideTitles(
                         showTitles: true,
                         reservedSize: 40,
+                        interval: maxQuantity > 5 ? 2 : 1,
                         getTitlesWidget: (value, meta) {
+                          if (value == meta.max) {
+                            return const SizedBox.shrink();
+                          }
                           return Text(
                             value.toInt().toString(),
                             style: const TextStyle(
@@ -892,7 +896,14 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   gridData: FlGridData(
                     show: true,
                     drawVerticalLine: false,
-                    horizontalInterval: maxQuantity > 0 ? maxQuantity / 5 : 20,
+                    horizontalInterval: maxQuantity > 5 ? 2 : 1,
+                    getDrawingHorizontalLine: (value) {
+                      return FlLine(
+                        color: Colors.grey.withOpacity(0.3),
+                        strokeWidth: 1,
+                        dashArray: [5, 5],
+                      );
+                    },
                   ),
                   barGroups: topProducts.asMap().entries.map((entry) {
                     return BarChartGroupData(
