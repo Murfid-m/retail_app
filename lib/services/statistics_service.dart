@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class StatisticsService {
@@ -6,6 +8,48 @@ class StatisticsService {
   Future<Map<String, dynamic>> loadStatistics({DateTime? startDate, DateTime? endDate}) async {
     try {
       print('📊 StatisticsService: Loading statistics...');
+
+      // First try to load local seeded JSON for admin dashboard if available
+      try {
+        final jsonString = await rootBundle.loadString('data/admin_statistic_dashboard.json');
+        final Map<String, dynamic> jsonData = json.decode(jsonString) as Map<String, dynamic>;
+        print('📁 Loaded local admin_statistic_dashboard.json');
+
+        final summary = jsonData['summary_cards'] ?? {};
+        final today = summary['today'] ?? {};
+        final thisWeek = summary['this_week'] ?? {};
+        final thisMonth = summary['this_month'] ?? {};
+        final allTime = summary['all_time'] ?? {};
+
+        final rawLast7 = jsonData['daily_sales_last_7_days'] as List<dynamic>?;
+        final last7 = (rawLast7 ?? []).map((e) => {
+              'date': e['date'],
+              'sales': (e['sales'] is num) ? (e['sales'] as num).toDouble() : 0.0,
+            }).toList();
+
+        return {
+          'daily': {
+            'sales': (today['total_sales'] as num?)?.toDouble() ?? 0.0,
+            'count': (today['total_orders'] as int?) ?? 0,
+          },
+          'weekly': {
+            'sales': (thisWeek['total_sales'] as num?)?.toDouble() ?? 0.0,
+            'count': (thisWeek['total_orders'] as int?) ?? 0,
+          },
+          'monthly': {
+            'sales': (thisMonth['total_sales'] as num?)?.toDouble() ?? 0.0,
+            'count': (thisMonth['total_orders'] as int?) ?? 0,
+          },
+          'total': {
+            'sales': (allTime['total_sales'] as num?)?.toDouble() ?? 0.0,
+            'count': (allTime['total_orders'] as int?) ?? 0,
+          },
+          'last_7_days': last7,
+        };
+      } catch (e) {
+        // If asset not present or fails to parse, continue to load from Supabase
+        print('📁 No local admin JSON asset found or failed to parse: $e');
+      }
       
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);

@@ -74,6 +74,7 @@ flutter:
 
   assets:
     - data/dashboard_summary.json
+    - data/admin_statistic_dashboard.json
 
   # To add assets to your application, add an assets section, like this:
   # assets:
