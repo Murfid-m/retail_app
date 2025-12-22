@@ -14,6 +14,8 @@ class OrderManagementScreen extends StatefulWidget {
 
 class _OrderManagementScreenState extends State<OrderManagementScreen> {
   final TextEditingController _searchController = TextEditingController();
+  String? _activeQuickFilter; // Melacak filter tanggal yang aktif
+  
   final List<String> _statusOptions = [
     'Semua Status',
     'pending',
@@ -48,6 +50,32 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
 
   String _formatDate(DateTime date) {
     return DateFormat('dd MMM yyyy, HH:mm').format(date);
+  }
+  
+  void _applyDateFilterPreservingStatus(OrderProvider orderProvider, DateTime startDate, DateTime endDate) {
+    // Apply date filter without resetting status filter
+    orderProvider.filterByDateRange(startDate, endDate);
+    
+    // Show confirmation with combined filter info
+    String message = 'Filter diterapkan: ${DateFormat('dd MMM yyyy').format(startDate)}';
+    if (startDate != endDate) {
+      message = 'Filter diterapkan: ${DateFormat('dd MMM').format(startDate)} - ${DateFormat('dd MMM yyyy').format(endDate)}';
+    }
+    
+    if (orderProvider.selectedStatuses.isNotEmpty) {
+      final statusLabels = orderProvider.selectedStatuses
+          .map((status) => _getStatusLabel(status))
+          .toList();
+      message += ' + Status: ${statusLabels.join(', ')}';
+    }
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+        backgroundColor: Colors.green[600],
+      ),
+    );
   }
   
   void _exportOrders(OrderProvider orderProvider) {
@@ -133,20 +161,25 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         // Search Bar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: SearchBar(
+          child: TextField(
             controller: _searchController,
-            hintText: 'Cari pesanan...',
-            leading: const Icon(Icons.search),
-            trailing: [
-              if (_searchController.text.isNotEmpty)
-                IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    _searchController.clear();
-                    orderProvider.searchOrders('');
-                  },
-                ),
-            ],
+            decoration: InputDecoration(
+              hintText: 'Cari pesanan...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        orderProvider.searchOrders('');
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+            ),
             onChanged: (value) {
               orderProvider.searchOrders(value);
             },
@@ -159,59 +192,62 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
           child: ListView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: _statusOptions.map((status) {
-              return _buildStatusChip(status, orderProvider);
-            }).toList(),
-          ),
-        ),
-
-        const SizedBox(height: 8),
-
-        // Divider
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Divider(
-            height: 1,
-            thickness: 1,
-            color: Colors.grey[300],
-          ),
-        ),
-
-        const SizedBox(height: 8),
-
-        // Date Filter
-        SizedBox(
-          height: 50,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
             children: [
-              _buildDateFilterChip('Hari ini', orderProvider, () {
-                final now = DateTime.now();
-                final today = DateTime(now.year, now.month, now.day);
-                orderProvider.filterByDateRange(today, today);
-              }),
+              ..._statusOptions.map((status) {
+                return _buildStatusChip(status, orderProvider);
+              }).toList(),
               const SizedBox(width: 8),
-              _buildDateFilterChip('Minggu ini', orderProvider, () {
-                final now = DateTime.now();
-                final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-                final start = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
-                final end = DateTime(now.year, now.month, now.day);
-                orderProvider.filterByDateRange(start, end);
-              }),
+              // Quick date filters
+              _buildQuickFilterChip('Hari ini', () {
+                if (_activeQuickFilter == 'Hari ini') {
+                  // Clear filter if same is clicked
+                  setState(() { _activeQuickFilter = null; });
+                  orderProvider.filterByDateRange(null, null);
+                } else {
+                  // Set new filter
+                  setState(() { _activeQuickFilter = 'Hari ini'; });
+                  final now = DateTime.now();
+                  final today = DateTime(now.year, now.month, now.day);
+                  orderProvider.filterByDateRange(today, today);
+                }
+              }, orderProvider),
               const SizedBox(width: 8),
-              _buildDateFilterChip('Bulan ini', orderProvider, () {
-                final now = DateTime.now();
-                final start = DateTime(now.year, now.month, 1);
-                final end = DateTime(now.year, now.month, now.day);
-                orderProvider.filterByDateRange(start, end);
-              }),
+              _buildQuickFilterChip('Minggu ini', () {
+                if (_activeQuickFilter == 'Minggu ini') {
+                  // Clear filter if same is clicked
+                  setState(() { _activeQuickFilter = null; });
+                  orderProvider.filterByDateRange(null, null);
+                } else {
+                  // Set new filter
+                  setState(() { _activeQuickFilter = 'Minggu ini'; });
+                  final now = DateTime.now();
+                  final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+                  final start = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+                  final end = DateTime(now.year, now.month, now.day);
+                  orderProvider.filterByDateRange(start, end);
+                }
+              }, orderProvider),
               const SizedBox(width: 8),
-              _buildCustomDateRangeChip(orderProvider),
+              _buildQuickFilterChip('Bulan ini', () {
+                if (_activeQuickFilter == 'Bulan ini') {
+                  // Clear filter if same is clicked
+                  setState(() { _activeQuickFilter = null; });
+                  orderProvider.filterByDateRange(null, null);
+                } else {
+                  // Set new filter
+                  setState(() { _activeQuickFilter = 'Bulan ini'; });
+                  final now = DateTime.now();
+                  final start = DateTime(now.year, now.month, 1);
+                  final end = DateTime(now.year, now.month, now.day);
+                  orderProvider.filterByDateRange(start, end);
+                }
+              }, orderProvider),
               const SizedBox(width: 8),
-              _buildSingleDatePickerChip(orderProvider),
+              // Date range filter
+              _buildDateRangeChip(orderProvider),
               const SizedBox(width: 8),
-              _buildClearDateFilterChip(orderProvider),
+              // Clear all filters button at the end
+              _buildClearAllFiltersChip(orderProvider),
             ],
           ),
         ),
@@ -220,199 +256,150 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
   }
 
   Widget _buildStatusChip(String status, OrderProvider orderProvider) {
-    final isSelected = (status == 'Semua Status' && orderProvider.selectedStatus == null) ||
-        orderProvider.selectedStatus == status.toLowerCase();
+    final isSelected = (status == 'Semua Status' && orderProvider.selectedStatuses.isEmpty) ||
+        orderProvider.selectedStatuses.contains(status.toLowerCase());
 
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(
         label: Text(_getStatusLabel(status)),
         selected: isSelected,
-        showCheckmark: false,
+        selectedColor: Colors.amber[600], // Warna kuning
+        checkmarkColor: Colors.white,
         onSelected: (selected) {
           if (status == 'Semua Status') {
-            orderProvider.filterByStatus(null);
+            orderProvider.filterByStatus(null); // Clear all status filters
           } else {
-            orderProvider.filterByStatus(status.toLowerCase());
+            orderProvider.toggleStatusFilter(status.toLowerCase());
           }
         },
       ),
     );
   }
 
-  Widget _buildDateFilterChip(String label, OrderProvider orderProvider, VoidCallback onTap) {
-    bool isActive = _isDateFilterActive(label, orderProvider);
+  Widget _buildDateRangeChip(OrderProvider orderProvider) {
+    final hasDateFilter = orderProvider.startDate != null || orderProvider.endDate != null;
     
-    return FilterChip(
-      label: Text(label),
-      selected: isActive,
-      showCheckmark: false,
-      onSelected: (selected) {
-        if (selected) {
-          onTap();
-        }
-      },
-    );
-  }
-
-  Widget _buildCustomDateRangeChip(OrderProvider orderProvider) {
-    final hasCustomRange = orderProvider.startDate != null && 
-                          orderProvider.endDate != null &&
-                          !_isDateFilterActive('Hari ini', orderProvider) &&
-                          !_isDateFilterActive('Minggu ini', orderProvider) &&
-                          !_isDateFilterActive('Bulan ini', orderProvider);
+    String label = 'Filter Tanggal';
+    if (hasDateFilter) {
+      final startDate = orderProvider.startDate!;
+      final endDate = orderProvider.endDate!;
+      if (startDate.year == endDate.year && 
+          startDate.month == endDate.month && 
+          startDate.day == endDate.day) {
+        label = DateFormat('dd MMM yyyy').format(startDate);
+      } else {
+        label = '${DateFormat('dd MMM').format(startDate)} - ${DateFormat('dd MMM yyyy').format(endDate)}';
+      }
+    }
     
     return FilterChip(
       label: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.date_range, size: 16),
+          Icon(Icons.date_range, size: 16, color: hasDateFilter ? Colors.white : null),
           const SizedBox(width: 4),
-          Text(hasCustomRange 
-              ? '${DateFormat('dd/MM').format(orderProvider.startDate!)} - ${DateFormat('dd/MM').format(orderProvider.endDate!)}'
-              : 'Rentang Tanggal'),
-        ],
-      ),
-      selected: hasCustomRange,
-      showCheckmark: false,
-      onSelected: (selected) {
-        _showDateRangePicker(orderProvider);
-      },
-    );
-  }
-
-  Widget _buildSingleDatePickerChip(OrderProvider orderProvider) {
-    return FilterChip(
-      label: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.calendar_today, size: 16),
-          SizedBox(width: 4),
-          Text('Pilih Tanggal'),
-        ],
-      ),
-      selected: false,
-      showCheckmark: false,
-      onSelected: (selected) {
-        _showSingleDatePicker(orderProvider);
-      },
-    );
-  }
-
-  Future<void> _showDateRangePicker(OrderProvider orderProvider) async {
-    final now = DateTime.now();
-    final DateTimeRange? picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2020),
-      lastDate: now,
-      initialDateRange: orderProvider.startDate != null && orderProvider.endDate != null
-          ? DateTimeRange(
-              start: orderProvider.startDate!,
-              end: orderProvider.endDate!,
-            )
-          : null,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: const Color(0xFFFFC20E),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: hasDateFilter ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
-          child: child!,
-        );
+        ],
+      ),
+      selected: hasDateFilter,
+      selectedColor: Colors.amber[600], // Warna kuning
+      onSelected: (selected) {
+        if (selected) {
+          setState(() { _activeQuickFilter = null; }); // Clear quick filter state
+          _showDateFilterOptions(orderProvider);
+        } else {
+          setState(() { _activeQuickFilter = null; }); // Clear quick filter state
+          orderProvider.filterByDateRange(null, null);
+        }
       },
     );
-
-    if (picked != null) {
-      orderProvider.filterByDateRange(picked.start, picked.end);
-    }
   }
 
-  Future<void> _showSingleDatePicker(OrderProvider orderProvider) async {
-    final now = DateTime.now();
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: orderProvider.startDate ?? now,
-      firstDate: DateTime(2020),
-      lastDate: now,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: const Color(0xFFFFC20E),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
-      final selectedDate = DateTime(picked.year, picked.month, picked.day);
-      orderProvider.filterByDateRange(selectedDate, selectedDate);
-    }
-  }
-
-  Widget _buildClearDateFilterChip(OrderProvider orderProvider) {
-    final hasDateFilter = orderProvider.startDate != null && orderProvider.endDate != null;
-    
-    if (!hasDateFilter) return const SizedBox.shrink();
+  Widget _buildClearAllFiltersChip(OrderProvider orderProvider) {
+    final hasActiveFilters = orderProvider.startDate != null || 
+                           orderProvider.endDate != null || 
+                           orderProvider.selectedStatuses.isNotEmpty || 
+                           orderProvider.searchQuery.isNotEmpty;
     
     return ActionChip(
       label: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.clear, size: 14),
+          Icon(Icons.clear_all, size: 14),
           SizedBox(width: 4),
-          Text('Hapus', style: TextStyle(fontSize: 12)),
+          Text('Dibatalkan', style: TextStyle(fontSize: 12)),
         ],
       ),
-      onPressed: () {
-        orderProvider.filterByDateRange(null, null);
-      },
-      backgroundColor: Colors.red[50],
-      side: BorderSide(color: Colors.red[200]!),
-      labelStyle: TextStyle(color: Colors.red[700]),
+      onPressed: hasActiveFilters ? () {
+        setState(() { _activeQuickFilter = null; }); // Reset state
+        orderProvider.clearFilters();
+        _searchController.clear();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Semua filter telah dibatalkan'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      } : null,
+      backgroundColor: hasActiveFilters ? Colors.red[50] : Colors.grey[100],
+      side: BorderSide(color: hasActiveFilters ? Colors.red[200]! : Colors.grey[300]!),
+      labelStyle: TextStyle(
+        color: hasActiveFilters ? Colors.red[700] : Colors.grey[500],
+      ),
     );
   }
 
-  bool _isDateFilterActive(String label, OrderProvider orderProvider) {
+  Widget _buildQuickFilterChip(String label, VoidCallback onPressed, OrderProvider orderProvider) {
+    bool isActive = _activeQuickFilter == label; // Gunakan state tracking
+    
+    return ActionChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+          color: isActive ? Colors.white : null,
+        ),
+      ),
+      onPressed: onPressed,
+      backgroundColor: isActive ? Colors.amber[600] : Colors.grey[100], // Warna kuning
+      side: BorderSide(
+        color: isActive ? Colors.amber[600]! : Colors.grey[300]!,
+      ),
+    );
+  }
+  
+  bool _isQuickFilterActive(String label, OrderProvider orderProvider) {
     if (orderProvider.startDate == null || orderProvider.endDate == null) return false;
     
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final startDate = orderProvider.startDate!;
-    final endDate = orderProvider.endDate!;
     
     switch (label) {
       case 'Hari ini':
-        return startDate.year == today.year && 
-               startDate.month == today.month && 
-               startDate.day == today.day &&
-               endDate.year == today.year && 
-               endDate.month == today.month && 
-               endDate.day == today.day;
+        return orderProvider.startDate!.isAtSameMomentAs(today) && 
+               orderProvider.endDate!.isAtSameMomentAs(today);
       case 'Minggu ini':
         final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
         final start = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
-        return startDate.year == start.year && 
-               startDate.month == start.month && 
-               startDate.day == start.day &&
-               endDate.year == today.year && 
-               endDate.month == today.month && 
-               endDate.day == today.day;
+        return orderProvider.startDate!.isAtSameMomentAs(start) && 
+               orderProvider.endDate!.isAtSameMomentAs(today);
       case 'Bulan ini':
         final start = DateTime(now.year, now.month, 1);
-        return startDate.year == start.year && 
-               startDate.month == start.month && 
-               startDate.day == start.day &&
-               endDate.year == today.year && 
-               endDate.month == today.month && 
-               endDate.day == today.day;
+        return orderProvider.startDate!.isAtSameMomentAs(start) && 
+               orderProvider.endDate!.isAtSameMomentAs(today);
       default:
         return false;
     }
   }
+
 
 
   String _getStatusLabel(String status) {
@@ -446,9 +433,15 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     List<String> activeFilters = [];
     
     // Add status filter info
-    if (orderProvider.selectedStatus != null) {
-      final statusLabel = _getStatusLabel(orderProvider.selectedStatus!);
-      activeFilters.add('Status: $statusLabel');
+    if (orderProvider.selectedStatuses.isNotEmpty) {
+      final statusLabels = orderProvider.selectedStatuses
+          .map((status) => _getStatusLabel(status))
+          .toList();
+      if (statusLabels.length == 1) {
+        activeFilters.add('Status: ${statusLabels.first}');
+      } else {
+        activeFilters.add('Status: ${statusLabels.join(', ')}');
+      }
     }
     
     // Add date filter info
@@ -470,9 +463,10 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     }
     
     String summaryText = '${orders.length} pesanan';
-    if (activeFilters.isNotEmpty) {
-      summaryText += ' dengan filter: ${activeFilters.join(', ')}';
-    }
+    // Menghilangkan info filter dari tampilan
+    // if (activeFilters.isNotEmpty) {
+    //   summaryText += ' dengan filter: ${activeFilters.join(', ')}';
+    // }
     
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -490,9 +484,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? const Color(0xFFFFC20E)
-                  : Theme.of(context).primaryColor,
+              color: Theme.of(context).primaryColor,
             ),
           ),
           const SizedBox(height: 8),
@@ -540,7 +532,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
   Widget _buildSummaryItem(String label, String value, IconData icon, Color color) {
     return Column(
       children: [
-        Icon(icon, color: color, size: 20),
+        // Icon(icon, color: color, size: 20), // Ikon dihilangkan
         const SizedBox(height: 4),
         Text(
           value,
@@ -561,109 +553,179 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     );
   }
 
+  Future<void> _showDateFilterOptions(OrderProvider orderProvider) async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Pilih Filter Tanggal',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.today),
+              title: const Text('Pilih Satu Tanggal'),
+              subtitle: const Text('Filter pesanan untuk hari tertentu'),
+              onTap: () {
+                Navigator.pop(context);
+                _showSingleDatePicker(orderProvider);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.date_range),
+              title: const Text('Pilih Rentang Tanggal'),
+              subtitle: const Text('Filter pesanan dari tanggal A ke tanggal B'),
+              onTap: () {
+                Navigator.pop(context);
+                _showDateRangePicker(orderProvider);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showSingleDatePicker(OrderProvider orderProvider) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: orderProvider.startDate ?? DateTime.now(),
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now(),
+      helpText: 'PILIH TANGGAL',
+      cancelText: 'BATAL',
+      confirmText: 'PILIH',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: Theme.of(context).primaryColor,
+              onPrimary: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      // Set same date for start and end to filter single day
+      orderProvider.filterByDateRange(picked, picked);
+      
+      // Show confirmation
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Filter diterapkan untuk: ${DateFormat('dd MMM yyyy').format(picked)}',
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<void> _showDateRangePicker(OrderProvider orderProvider) async {
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now(),
+      initialDateRange: orderProvider.startDate != null && orderProvider.endDate != null
+          ? DateTimeRange(start: orderProvider.startDate!, end: orderProvider.endDate!)
+          : null,
+      helpText: 'PILIH RENTANG TANGGAL',
+      cancelText: 'BATAL',
+      confirmText: 'SIMPAN',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: Theme.of(context).primaryColor,
+              onPrimary: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      orderProvider.filterByDateRange(picked.start, picked.end);
+      
+      // Show confirmation
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Filter diterapkan: ${DateFormat('dd MMM').format(picked.start)} - ${DateFormat('dd MMM yyyy').format(picked.end)}',
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<OrderProvider>(
       builder: (context, orderProvider, child) {
-        // Show loading state
-        if (orderProvider.isLoading) {
-          return Column(
-            children: [
-              _buildSearchAndFilter(orderProvider),
-              _buildOrdersSummary(orderProvider),
-              Expanded(
-                child: ListSkeleton(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: 5,
-                  itemBuilder: (context, index) => const OrderCardSkeleton(),
-                  separator: const SizedBox(height: 12),
-                ),
-              ),
-            ],
-          );
-        }
-        
-        // Show empty state
-        if (orderProvider.orders.isEmpty) {
-          return Column(
-            children: [
-              _buildSearchAndFilter(orderProvider),
-              _buildOrdersSummary(orderProvider),
-              Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.receipt_long_outlined,
-                        size: 100,
-                        color: Colors.grey[300],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        orderProvider.searchQuery.isNotEmpty ||
-                                orderProvider.selectedStatus != null ||
-                                orderProvider.startDate != null ||
-                                orderProvider.endDate != null
-                            ? 'Tidak ada pesanan ditemukan'
-                            : 'Belum ada pesanan',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.grey[600],
+        return Column(
+          children: [
+            _buildSearchAndFilter(orderProvider),
+            _buildOrdersSummary(orderProvider),
+            Expanded(
+              child: orderProvider.isLoading
+                  ? ListSkeleton(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: 5,
+                      itemBuilder: (context, index) => const OrderCardSkeleton(),
+                      separator: const SizedBox(height: 12),
+                    )
+                  : orderProvider.orders.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.receipt_long_outlined,
+                                size: 100,
+                                color: Colors.grey[300],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                orderProvider.searchQuery.isNotEmpty ||
+                                        orderProvider.selectedStatus != null ||
+                                        orderProvider.startDate != null ||
+                                        orderProvider.endDate != null
+                                    ? 'Tidak ada pesanan ditemukan'
+                                    : 'Belum ada pesanan',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.grey[600],
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        )
+                      : RefreshIndicator(
+                          onRefresh: () => orderProvider.loadAllOrders(),
+                          child: ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: orderProvider.orders.length,
+                            itemBuilder: (context, index) {
+                              return _buildOrderCard(orderProvider.orders[index], orderProvider);
+                            },
+                          ),
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          );
-        }
-        
-        // Show orders with floating search/filter
-        return RefreshIndicator(
-          onRefresh: () => orderProvider.loadAllOrders(),
-          child: CustomScrollView(
-            slivers: [
-              SliverAppBar(
-                floating: true,
-                snap: true,
-                toolbarHeight: 400, // Increased for divider
-                automaticallyImplyLeading: false,
-                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-                surfaceTintColor: Colors.transparent,
-                flexibleSpace: SafeArea(
-                  bottom: false,
-                  child: SingleChildScrollView(
-                    physics: const NeverScrollableScrollPhysics(),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _buildSearchAndFilter(orderProvider),
-                        _buildOrdersSummary(orderProvider),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    return Padding(
-                      padding: EdgeInsets.only(
-                        left: 16,
-                        right: 16,
-                        bottom: index == orderProvider.orders.length - 1 ? 16 : 0,
-                      ),
-                      child: _buildOrderCard(orderProvider.orders[index], orderProvider),
-                    );
-                  },
-                  childCount: orderProvider.orders.length,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );
@@ -671,7 +733,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
 
   Widget _buildOrderCard(OrderModel order, OrderProvider orderProvider) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ExpansionTile(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

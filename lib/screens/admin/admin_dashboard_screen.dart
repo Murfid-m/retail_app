@@ -18,23 +18,22 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _currentIndex = 0;
 
-  void _navigateToOrders() {
+  void _switchToOrderTab() {
     setState(() {
-      _currentIndex = 1; // Index for OrderManagementScreen
+      _currentIndex = 1; // Index 1 adalah Order Management
     });
   }
-
-  List<Widget> get _screens => [
-    const ProductManagementScreen(),
-    const OrderManagementScreen(),
-    StatisticsScreen(onNavigateToOrders: _navigateToOrders),
-    const LowStockScreen(),
-  ];
 
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.user;
+
+    final List<Widget> screens = [
+      const ProductManagementScreen(),
+      const OrderManagementScreen(),
+      StatisticsScreen(onNavigateToOrders: _switchToOrderTab),
+    ];
 
     return Scaffold(
       appBar: AppBar(
@@ -178,7 +177,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ],
         ),
       ),
-      body: _screens[_currentIndex],
+      body: screens[_currentIndex],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) {
