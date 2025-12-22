@@ -53,6 +53,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   }
 
   void _navigateToOrdersWithFilter(String period) {
+    // Switch to Order Management tab immediately
+    if (widget.onNavigateToOrders != null) {
+      widget.onNavigateToOrders!();
+    }
+
+    // Then apply filter
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
     final now = DateTime.now();
     DateTime? startDate;
@@ -79,51 +85,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       case 'Total':
         // Clear all filters for total view
         orderProvider.clearFilters();
-        break;
+        return; // Exit early for total
     }
 
-    // Apply filter only if not Total
-    if (period != 'Total') {
-      if (startDate != null && endDate != null) {
-        orderProvider.filterByDateRange(startDate, endDate);
-      } else {
-        orderProvider.filterByDateRange(null, null);
-      }
-    }
-
-    // Show feedback message
-    String message = 'Menampilkan pesanan ';
-    switch (period) {
-      case 'Hari Ini':
-        message +=
-            'hari ini (${DateFormat('dd MMM yyyy').format(DateTime.now())})';
-        break;
-      case 'Minggu Ini':
-        message += 'minggu ini';
-        break;
-      case 'Bulan Ini':
-        message +=
-            'bulan ini (${DateFormat('MMMM yyyy').format(DateTime.now())})';
-        break;
-      case 'Total':
-        message += 'keseluruhan';
-        break;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green[600],
-        duration: const Duration(seconds: 2),
-      ),
-    );
-
-    // Switch to Order Management tab
-    if (widget.onNavigateToOrders != null) {
-      // Delay navigation to allow snackbar to show
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        widget.onNavigateToOrders!();
-      });
+    // Apply filter after navigation
+    if (startDate != null && endDate != null) {
+      orderProvider.filterByDateRange(startDate, endDate);
     }
   }
 

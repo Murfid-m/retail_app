@@ -164,6 +164,57 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
             }).toList(),
           ),
         ),
+
+        const SizedBox(height: 8),
+
+        // Divider
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Divider(
+            height: 1,
+            thickness: 1,
+            color: Colors.grey[300],
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        // Date Filter
+        SizedBox(
+          height: 50,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: [
+              _buildDateFilterChip('Hari ini', orderProvider, () {
+                final now = DateTime.now();
+                final today = DateTime(now.year, now.month, now.day);
+                orderProvider.filterByDateRange(today, today);
+              }),
+              const SizedBox(width: 8),
+              _buildDateFilterChip('Minggu ini', orderProvider, () {
+                final now = DateTime.now();
+                final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+                final start = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+                final end = DateTime(now.year, now.month, now.day);
+                orderProvider.filterByDateRange(start, end);
+              }),
+              const SizedBox(width: 8),
+              _buildDateFilterChip('Bulan ini', orderProvider, () {
+                final now = DateTime.now();
+                final start = DateTime(now.year, now.month, 1);
+                final end = DateTime(now.year, now.month, now.day);
+                orderProvider.filterByDateRange(start, end);
+              }),
+              const SizedBox(width: 8),
+              _buildCustomDateRangeChip(orderProvider),
+              const SizedBox(width: 8),
+              _buildSingleDatePickerChip(orderProvider),
+              const SizedBox(width: 8),
+              _buildClearDateFilterChip(orderProvider),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -187,6 +238,180 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         },
       ),
     );
+  }
+
+  Widget _buildDateFilterChip(String label, OrderProvider orderProvider, VoidCallback onTap) {
+    bool isActive = _isDateFilterActive(label, orderProvider);
+    
+    return FilterChip(
+      label: Text(label),
+      selected: isActive,
+      showCheckmark: false,
+      onSelected: (selected) {
+        if (selected) {
+          onTap();
+        }
+      },
+    );
+  }
+
+  Widget _buildCustomDateRangeChip(OrderProvider orderProvider) {
+    final hasCustomRange = orderProvider.startDate != null && 
+                          orderProvider.endDate != null &&
+                          !_isDateFilterActive('Hari ini', orderProvider) &&
+                          !_isDateFilterActive('Minggu ini', orderProvider) &&
+                          !_isDateFilterActive('Bulan ini', orderProvider);
+    
+    return FilterChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.date_range, size: 16),
+          const SizedBox(width: 4),
+          Text(hasCustomRange 
+              ? '${DateFormat('dd/MM').format(orderProvider.startDate!)} - ${DateFormat('dd/MM').format(orderProvider.endDate!)}'
+              : 'Rentang Tanggal'),
+        ],
+      ),
+      selected: hasCustomRange,
+      showCheckmark: false,
+      onSelected: (selected) {
+        _showDateRangePicker(orderProvider);
+      },
+    );
+  }
+
+  Widget _buildSingleDatePickerChip(OrderProvider orderProvider) {
+    return FilterChip(
+      label: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.calendar_today, size: 16),
+          SizedBox(width: 4),
+          Text('Pilih Tanggal'),
+        ],
+      ),
+      selected: false,
+      showCheckmark: false,
+      onSelected: (selected) {
+        _showSingleDatePicker(orderProvider);
+      },
+    );
+  }
+
+  Future<void> _showDateRangePicker(OrderProvider orderProvider) async {
+    final now = DateTime.now();
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: now,
+      initialDateRange: orderProvider.startDate != null && orderProvider.endDate != null
+          ? DateTimeRange(
+              start: orderProvider.startDate!,
+              end: orderProvider.endDate!,
+            )
+          : null,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: const Color(0xFFFFC20E),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      orderProvider.filterByDateRange(picked.start, picked.end);
+    }
+  }
+
+  Future<void> _showSingleDatePicker(OrderProvider orderProvider) async {
+    final now = DateTime.now();
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: orderProvider.startDate ?? now,
+      firstDate: DateTime(2020),
+      lastDate: now,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: const Color(0xFFFFC20E),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      final selectedDate = DateTime(picked.year, picked.month, picked.day);
+      orderProvider.filterByDateRange(selectedDate, selectedDate);
+    }
+  }
+
+  Widget _buildClearDateFilterChip(OrderProvider orderProvider) {
+    final hasDateFilter = orderProvider.startDate != null && orderProvider.endDate != null;
+    
+    if (!hasDateFilter) return const SizedBox.shrink();
+    
+    return ActionChip(
+      label: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.clear, size: 14),
+          SizedBox(width: 4),
+          Text('Hapus', style: TextStyle(fontSize: 12)),
+        ],
+      ),
+      onPressed: () {
+        orderProvider.filterByDateRange(null, null);
+      },
+      backgroundColor: Colors.red[50],
+      side: BorderSide(color: Colors.red[200]!),
+      labelStyle: TextStyle(color: Colors.red[700]),
+    );
+  }
+
+  bool _isDateFilterActive(String label, OrderProvider orderProvider) {
+    if (orderProvider.startDate == null || orderProvider.endDate == null) return false;
+    
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final startDate = orderProvider.startDate!;
+    final endDate = orderProvider.endDate!;
+    
+    switch (label) {
+      case 'Hari ini':
+        return startDate.year == today.year && 
+               startDate.month == today.month && 
+               startDate.day == today.day &&
+               endDate.year == today.year && 
+               endDate.month == today.month && 
+               endDate.day == today.day;
+      case 'Minggu ini':
+        final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+        final start = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+        return startDate.year == start.year && 
+               startDate.month == start.month && 
+               startDate.day == start.day &&
+               endDate.year == today.year && 
+               endDate.month == today.month && 
+               endDate.day == today.day;
+      case 'Bulan ini':
+        final start = DateTime(now.year, now.month, 1);
+        return startDate.year == start.year && 
+               startDate.month == start.month && 
+               startDate.day == start.day &&
+               endDate.year == today.year && 
+               endDate.month == today.month && 
+               endDate.day == today.day;
+      default:
+        return false;
+    }
   }
 
 
@@ -265,7 +490,9 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Theme.of(context).primaryColor,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFFFFC20E)
+                  : Theme.of(context).primaryColor,
             ),
           ),
           const SizedBox(height: 8),
@@ -402,7 +629,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
               SliverAppBar(
                 floating: true,
                 snap: true,
-                toolbarHeight: 330, // Increased height for all content
+                toolbarHeight: 400, // Increased for divider
                 automaticallyImplyLeading: false,
                 backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                 surfaceTintColor: Colors.transparent,
