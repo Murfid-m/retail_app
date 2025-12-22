@@ -159,25 +159,20 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         // Search Bar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: TextField(
+          child: SearchBar(
             controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Cari pesanan...',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                        orderProvider.searchOrders('');
-                      },
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              filled: true,
-            ),
+            hintText: 'Cari pesanan...',
+            leading: const Icon(Icons.search),
+            trailing: [
+              if (_searchController.text.isNotEmpty)
+                IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    orderProvider.searchOrders('');
+                  },
+                ),
+            ],
             onChanged: (value) {
               orderProvider.searchOrders(value);
             },
@@ -645,57 +640,105 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
   Widget build(BuildContext context) {
     return Consumer<OrderProvider>(
       builder: (context, orderProvider, child) {
-        return Column(
-          children: [
-            _buildSearchAndFilter(orderProvider),
-            _buildOrdersSummary(orderProvider),
-            Expanded(
-              child: orderProvider.isLoading
-                  ? ListSkeleton(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: 5,
-                      itemBuilder: (context, index) => const OrderCardSkeleton(),
-                      separator: const SizedBox(height: 12),
-                    )
-                  : orderProvider.orders.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.receipt_long_outlined,
-                                size: 100,
-                                color: Colors.grey[300],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                orderProvider.searchQuery.isNotEmpty ||
-                                        orderProvider.selectedStatus != null ||
-                                        orderProvider.startDate != null ||
-                                        orderProvider.endDate != null
-                                    ? 'Tidak ada pesanan ditemukan'
-                                    : 'Belum ada pesanan',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey[600],
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        )
-                      : RefreshIndicator(
-                          onRefresh: () => orderProvider.loadAllOrders(),
-                          child: ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: orderProvider.orders.length,
-                            itemBuilder: (context, index) {
-                              return _buildOrderCard(orderProvider.orders[index], orderProvider);
-                            },
-                          ),
+        // Show loading state
+        if (orderProvider.isLoading) {
+          return Column(
+            children: [
+              _buildSearchAndFilter(orderProvider),
+              _buildOrdersSummary(orderProvider),
+              Expanded(
+                child: ListSkeleton(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: 5,
+                  itemBuilder: (context, index) => const OrderCardSkeleton(),
+                  separator: const SizedBox(height: 12),
+                ),
+              ),
+            ],
+          );
+        }
+        
+        // Show empty state
+        if (orderProvider.orders.isEmpty) {
+          return Column(
+            children: [
+              _buildSearchAndFilter(orderProvider),
+              _buildOrdersSummary(orderProvider),
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.receipt_long_outlined,
+                        size: 100,
+                        color: Colors.grey[300],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        orderProvider.searchQuery.isNotEmpty ||
+                                orderProvider.selectedStatus != null ||
+                                orderProvider.startDate != null ||
+                                orderProvider.endDate != null
+                            ? 'Tidak ada pesanan ditemukan'
+                            : 'Belum ada pesanan',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.grey[600],
                         ),
-            ),
-          ],
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+        
+        // Show orders with floating search/filter
+        return RefreshIndicator(
+          onRefresh: () => orderProvider.loadAllOrders(),
+          child: CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                floating: true,
+                snap: true,
+                toolbarHeight: 330, // Increased height for all content
+                automaticallyImplyLeading: false,
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                surfaceTintColor: Colors.transparent,
+                flexibleSpace: SafeArea(
+                  bottom: false,
+                  child: SingleChildScrollView(
+                    physics: const NeverScrollableScrollPhysics(),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildSearchAndFilter(orderProvider),
+                        _buildOrdersSummary(orderProvider),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    return Padding(
+                      padding: EdgeInsets.only(
+                        left: 16,
+                        right: 16,
+                        bottom: index == orderProvider.orders.length - 1 ? 16 : 0,
+                      ),
+                      child: _buildOrderCard(orderProvider.orders[index], orderProvider),
+                    );
+                  },
+                  childCount: orderProvider.orders.length,
+                ),
+              ),
+            ],
+          ),
         );
       },
     );

@@ -54,25 +54,20 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
         // Search Bar
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: TextField(
+          child: SearchBar(
             controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Cari produk...',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                        productProvider.searchProducts('');
-                      },
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              filled: true,
-            ),
+            hintText: 'Cari produk...',
+            leading: const Icon(Icons.search),
+            trailing: [
+              if (_searchController.text.isNotEmpty)
+                IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    productProvider.searchProducts('');
+                  },
+                ),
+            ],
             onChanged: (value) {
               productProvider.searchProducts(value);
             },
@@ -120,86 +115,146 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
     return Scaffold(
       body: Consumer<ProductProvider>(
         builder: (context, productProvider, child) {
-          return Column(
-            children: [
-              _buildSearchAndFilter(productProvider),
-              Expanded(
-                child: productProvider.isLoading
-                    ? ListSkeleton(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: 5,
-                        itemBuilder: (context, index) => const ProductCardSkeleton(),
-                        separator: const SizedBox(height: 12),
-                      )
-                    : productProvider.error != null
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(productProvider.error!),
-                                ElevatedButton(
-                                  onPressed: () => productProvider.loadProducts(),
-                                  child: const Text('Coba Lagi'),
-                                ),
-                              ],
-                            ),
-                          )
-                        : productProvider.products.isEmpty
-                            ? Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.inventory_2_outlined,
-                                      size: 100,
-                                      color: Colors.grey[300],
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      productProvider.searchQuery.isNotEmpty ||
-                                              productProvider.selectedCategory != null
-                                          ? 'Tidak ada produk ditemukan'
-                                          : 'Belum ada produk',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        color: Colors.grey[600],
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    if (productProvider.searchQuery.isEmpty &&
-                                        productProvider.selectedCategory == null)
-                                      ElevatedButton.icon(
-                                        onPressed: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  const AddEditProductScreen(),
-                                            ),
-                                          );
-                                        },
-                                        icon: const Icon(Icons.add),
-                                        label: const Text('Tambah Produk'),
-                                      ),
-                                  ],
-                                ),
-                              )
-                            : RefreshIndicator(
-                                onRefresh: () => productProvider.loadProducts(),
-                                child: ListView.builder(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                                  itemCount: productProvider.products.length,
-                                  itemBuilder: (context, index) {
-                                    return _buildProductCard(
-                                      productProvider.products[index],
-                                      productProvider,
-                                    );
+          if (productProvider.isLoading) {
+            return ListSkeleton(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: 5,
+              itemBuilder: (context, index) => const ProductCardSkeleton(),
+              separator: const SizedBox(height: 12),
+            );
+          }
+
+          if (productProvider.error != null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(productProvider.error!),
+                  ElevatedButton(
+                    onPressed: () => productProvider.loadProducts(),
+                    child: const Text('Coba Lagi'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          if (productProvider.products.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.inventory_2_outlined,
+                    size: 100,
+                    color: Colors.grey[300],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    productProvider.searchQuery.isNotEmpty ||
+                            productProvider.selectedCategory != null
+                        ? 'Tidak ada produk ditemukan'
+                        : 'Belum ada produk',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.grey[600],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  if (productProvider.searchQuery.isEmpty &&
+                      productProvider.selectedCategory == null)
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AddEditProductScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('Tambah Produk'),
+                    ),
+                ],
+              ),
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: () => productProvider.loadProducts(),
+            child: CustomScrollView(
+              slivers: [
+                // Search bar dan Category filter sebagai floating sliver
+                SliverAppBar(
+                  floating: true,
+                  snap: true,
+                  automaticallyImplyLeading: false,
+                  backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                  elevation: 0,
+                  toolbarHeight: 148,
+                  flexibleSpace: SafeArea(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Search bar
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                          child: SearchBar(
+                            controller: _searchController,
+                            hintText: 'Cari produk...',
+                            leading: const Icon(Icons.search),
+                            trailing: [
+                              if (_searchController.text.isNotEmpty)
+                                IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    productProvider.searchProducts('');
                                   },
                                 ),
-                              ),
-              ),
-            ],
+                            ],
+                            onChanged: (value) {
+                              productProvider.searchProducts(value);
+                            },
+                          ),
+                        ),
+                        // Category filter
+                        SizedBox(
+                          height: 50,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            children: _categories.map((category) {
+                              return _buildCategoryChip(category, productProvider);
+                            }).toList(),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                    ),
+                  ),
+                ),
+                // Product list sebagai sliver
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildProductCard(
+                            productProvider.products[index],
+                            productProvider,
+                          ),
+                        );
+                      },
+                      childCount: productProvider.products.length,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           );
         },
       ),

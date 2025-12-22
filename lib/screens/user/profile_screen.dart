@@ -370,7 +370,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                               color: Colors.red,
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 16),
                           Expanded(
                             child: _buildStatCard(
                               icon: Icons.shopping_bag,
@@ -381,11 +381,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           ),
                         ],
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 32),
 
                       // Personal Information
                       _buildSectionTitle('Informasi Pribadi'),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                       _buildInfoCard(
                         icon: Icons.person_outline,
                         title: 'Nama Lengkap',
@@ -403,7 +403,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           },
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       _buildInfoCard(
                         icon: Icons.phone_outlined,
                         title: 'Nomor HP',
@@ -425,7 +425,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           },
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       _buildInfoCard(
                         icon: Icons.location_on_outlined,
                         title: 'Alamat',
@@ -445,18 +445,18 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           },
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 32),
 
                       // Account Information
                       _buildSectionTitle('Informasi Akun'),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                       _buildInfoCard(
                         icon: Icons.email_outlined,
                         title: 'Email',
                         value: user.email ?? '-',
                         showEdit: false,
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       _buildInfoCard(
                         icon: Icons.calendar_today_outlined,
                         title: 'Bergabung Sejak',
@@ -465,18 +465,18 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             : '-',
                         showEdit: false,
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       _buildInfoCard(
                         icon: Icons.verified_user_outlined,
                         title: 'Status Akun',
                         value: user.isAdmin ? 'Admin' : 'User',
                         showEdit: false,
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 32),
 
                       // Settings & Actions
                       _buildSectionTitle('Pengaturan'),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                       _buildMenuTile(
                         icon: Icons.lock_outline,
                         title: 'Ubah Password',
@@ -488,8 +488,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             ),
                           );
                         },
-                      ),
-                      _buildMenuTile(
+                      ),                      const SizedBox(height: 8),                      _buildMenuTile(
                         icon: Icons.notifications_outlined,
                         title: 'Notifikasi',
                         subtitle: _notificationsEnabled ? 'Aktif' : 'Nonaktif',
@@ -510,8 +509,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             );
                           },
                         ),
-                      ),
-                      _buildMenuTile(
+                      ),                      const SizedBox(height: 8),                      _buildMenuTile(
                         icon: Icons.help_outline,
                         title: 'Bantuan & Dukungan',
                         onTap: () {
@@ -523,6 +521,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           );
                         },
                       ),
+                      const SizedBox(height: 8),
                       _buildMenuTile(
                         icon: Icons.info_outline,
                         title: 'Tentang Aplikasi',
@@ -531,7 +530,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           _showAboutDialog();
                         },
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 32),
 
                       // Logout button
                       SizedBox(
@@ -575,31 +574,32 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         side: BorderSide(color: Colors.grey.withOpacity(0.2)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: color, size: 22),
+              child: Icon(icon, color: color, size: 24),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 12),
             Text(
               count.toString(),
               style: const TextStyle(
-                fontSize: 22,
+                fontSize: 24,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 4),
             Text(
               label,
               style: TextStyle(
                 color: Colors.grey[600],
-                fontSize: 11,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
@@ -636,7 +636,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         onTap: showEdit ? onEdit : null,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(16),
           child: Row(
             children: [
               Container(
@@ -700,7 +700,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }) {
     return Card(
       elevation: 0,
-      margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: Colors.grey.withOpacity(0.2)),
@@ -743,7 +742,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             ),
             const SizedBox(height: 16),
             const Text(
-              'Retail App',
+              '3F',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
