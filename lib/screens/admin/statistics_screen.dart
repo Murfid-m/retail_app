@@ -8,7 +8,7 @@ import '../../widgets/skeleton_loading.dart';
 
 class StatisticsScreen extends StatefulWidget {
   final VoidCallback? onNavigateToOrders;
-  
+
   const StatisticsScreen({super.key, this.onNavigateToOrders});
 
   @override
@@ -53,6 +53,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   }
 
   void _navigateToOrdersWithFilter(String period) {
+    // Switch to Order Management tab immediately
+    if (widget.onNavigateToOrders != null) {
+      widget.onNavigateToOrders!();
+    }
+
+    // Then apply filter
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
     final now = DateTime.now();
     DateTime? startDate;
@@ -65,7 +71,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         break;
       case 'Minggu Ini':
         final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-        startDate = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+        startDate = DateTime(
+          startOfWeek.year,
+          startOfWeek.month,
+          startOfWeek.day,
+        );
         endDate = DateTime(now.year, now.month, now.day);
         break;
       case 'Bulan Ini':
@@ -75,49 +85,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       case 'Total':
         // Clear all filters for total view
         orderProvider.clearFilters();
-        break;
+        return; // Exit early for total
     }
 
-    // Apply filter only if not Total
-    if (period != 'Total') {
-      if (startDate != null && endDate != null) {
-        orderProvider.filterByDateRange(startDate, endDate);
-      } else {
-        orderProvider.filterByDateRange(null, null);
-      }
-    }
-
-    // Show feedback message
-    String message = 'Menampilkan pesanan ';
-    switch (period) {
-      case 'Hari Ini':
-        message += 'hari ini (${DateFormat('dd MMM yyyy').format(DateTime.now())})';
-        break;
-      case 'Minggu Ini':
-        message += 'minggu ini';
-        break;
-      case 'Bulan Ini':
-        message += 'bulan ini (${DateFormat('MMMM yyyy').format(DateTime.now())})';
-        break;
-      case 'Total':
-        message += 'keseluruhan';
-        break;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green[600],
-        duration: const Duration(seconds: 2),
-      ),
-    );
-
-    // Switch to Order Management tab
-    if (widget.onNavigateToOrders != null) {
-      // Delay navigation to allow snackbar to show
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        widget.onNavigateToOrders!();
-      });
+    // Apply filter after navigation
+    if (startDate != null && endDate != null) {
+      orderProvider.filterByDateRange(startDate, endDate);
     }
   }
 
@@ -126,181 +99,208 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     return Scaffold(
       body: Consumer<OrderProvider>(
         builder: (context, orderProvider, child) {
-        if (orderProvider.isLoading) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // KPI Cards skeleton
-                Row(
-                  children: [
-                    Expanded(child: StatCardSkeleton()),
-                    const SizedBox(width: 8),
-                    Expanded(child: StatCardSkeleton()),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(child: StatCardSkeleton()),
-                    const SizedBox(width: 8),
-                    Expanded(child: StatCardSkeleton()),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                // Chart section skeleton
-                SkeletonLoading(width: double.infinity, height: 300, borderRadius: BorderRadius.circular(12)),
-                const SizedBox(height: 24),
-                SkeletonLoading(width: double.infinity, height: 300, borderRadius: BorderRadius.circular(12)),
-              ],
-            ),
-          );
-        }
-
-        final stats = orderProvider.statistics;
-        if (stats == null) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.info_outline, size: 64, color: Colors.grey),
-                const SizedBox(height: 16),
-                const Text('Gagal memuat statistik'),
-                const SizedBox(height: 8),
-                ElevatedButton(
-                  onPressed: () => orderProvider.loadStatistics(),
-                  child: const Text('Coba Lagi'),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: _showSeedDataDialog,
-                  icon: const Icon(Icons.dataset),
-                  label: const Text('Seed Data Testing'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFFFFC20E),
-                    side: const BorderSide(color: Color(0xFFFFC20E)),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        // Check if all stats are 0 - with safe access
-        final dailySales = (stats['daily'] as Map?)?['sales'] ?? 0;
-        final weeklySales = (stats['weekly'] as Map?)?['sales'] ?? 0;
-        final monthlySales = (stats['monthly'] as Map?)?['sales'] ?? 0;
-        final totalSales = (stats['total'] as Map?)?['sales'] ?? 0;
-        
-        final isAllZero = dailySales == 0 && weeklySales == 0 && monthlySales == 0 && totalSales == 0;
-        
-        print('🔍 Stats check: daily=$dailySales, weekly=$weeklySales, monthly=$monthlySales, total=$totalSales, isAllZero=$isAllZero');
-
-        return RefreshIndicator(
-          onRefresh: () => orderProvider.loadStatistics(),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Custom AppBar with margin
-                Container(
-                  margin: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFC20E),
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  child: Row(
+          if (orderProvider.isLoading) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // KPI Cards skeleton
+                  Row(
                     children: [
-                      const Expanded(
-                        child: Text(
-                          'Statistik',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.dataset, color: Colors.black),
-                        tooltip: 'Seed Data Testing',
-                        onPressed: _showSeedDataDialog,
-                      ),
+                      Expanded(child: StatCardSkeleton()),
+                      const SizedBox(width: 8),
+                      Expanded(child: StatCardSkeleton()),
                     ],
                   ),
-                ),
-                
-                // Content with horizontal padding
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 8),
+                  Row(
                     children: [
-                      // Seed data button if stats are 0
-                      if (isAllZero)
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          margin: const EdgeInsets.only(bottom: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.orange[50],
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.orange),
+                      Expanded(child: StatCardSkeleton()),
+                      const SizedBox(width: 8),
+                      Expanded(child: StatCardSkeleton()),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  // Chart section skeleton
+                  SkeletonLoading(
+                    width: double.infinity,
+                    height: 300,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  const SizedBox(height: 24),
+                  SkeletonLoading(
+                    width: double.infinity,
+                    height: 300,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final stats = orderProvider.statistics;
+          if (stats == null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.info_outline, size: 64, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  const Text('Gagal memuat statistik'),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: () => orderProvider.loadStatistics(),
+                    child: const Text('Coba Lagi'),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: _showSeedDataDialog,
+                    icon: const Icon(Icons.dataset),
+                    label: const Text('Seed Data Testing'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFFFC20E),
+                      side: const BorderSide(color: Color(0xFFFFC20E)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          // Check if all stats are 0 - with safe access
+          final dailySales = (stats['daily'] as Map?)?['sales'] ?? 0;
+          final weeklySales = (stats['weekly'] as Map?)?['sales'] ?? 0;
+          final monthlySales = (stats['monthly'] as Map?)?['sales'] ?? 0;
+          final totalSales = (stats['total'] as Map?)?['sales'] ?? 0;
+
+          final isAllZero =
+              dailySales == 0 &&
+              weeklySales == 0 &&
+              monthlySales == 0 &&
+              totalSales == 0;
+
+          print(
+            '🔍 Stats check: daily=$dailySales, weekly=$weeklySales, monthly=$monthlySales, total=$totalSales, isAllZero=$isAllZero',
+          );
+
+          return RefreshIndicator(
+            onRefresh: () => orderProvider.loadStatistics(),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Custom AppBar with margin
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFC20E),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Statistik',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          child: Column(
-                            children: [
-                              const Icon(Icons.info_outline, color: Colors.orange, size: 32),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Belum ada data statistik',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 4),
-                              const Text(
-                                'Gunakan data testing untuk melihat contoh statistik',
-                                style: TextStyle(fontSize: 12, color: Colors.grey),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 12),
-                              ElevatedButton.icon(
-                                onPressed: _showSeedDataDialog,
-                                icon: const Icon(Icons.dataset),
-                                label: const Text('Seed Data Testing'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFFFC20E),
-                                  foregroundColor: Colors.black,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.dataset, color: Colors.black),
+                          tooltip: 'Seed Data Testing',
+                          onPressed: _showSeedDataDialog,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Content with horizontal padding
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Seed data button if stats are 0
+                        if (isAllZero)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            margin: const EdgeInsets.only(bottom: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.orange[50],
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.orange),
+                            ),
+                            child: Column(
+                              children: [
+                                const Icon(
+                                  Icons.info_outline,
+                                  color: Colors.orange,
+                                  size: 32,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Belum ada data statistik',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'Gunakan data testing untuk melihat contoh statistik',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 12),
+                                ElevatedButton.icon(
+                                  onPressed: _showSeedDataDialog,
+                                  icon: const Icon(Icons.dataset),
+                                  label: const Text('Seed Data Testing'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFFFC20E),
+                                    foregroundColor: Colors.black,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      
-                      // Date range filter
-                      _buildDateRangeFilter(orderProvider),
-                      const SizedBox(height: 16),
-                      
-                      // Statistics cards
-                      _buildStatisticsCards(stats),
-                      const SizedBox(height: 24),
 
-                      // Sales chart
-                      _buildSalesChart(orderProvider.chartData, orderProvider.statistics),
-                      const SizedBox(height: 16),
-                      
-                      // Top products chart
-                      _buildTopProductsChart(orderProvider.topProducts),
-                      const SizedBox(height: 16),
-                    ],
+                        // Date range filter
+                        _buildDateRangeFilter(orderProvider),
+                        const SizedBox(height: 16),
+
+                        // Statistics cards
+                        _buildStatisticsCards(stats),
+                        const SizedBox(height: 24),
+
+                        // Sales chart
+                        _buildSalesChart(
+                          orderProvider.chartData,
+                          orderProvider.statistics,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Top products chart
+                        _buildTopProductsChart(orderProvider.topProducts),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
       ),
     );
   }
@@ -309,19 +309,23 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     // Check if custom date range is set
     final dateRange = stats['date_range'];
     final hasCustomRange = dateRange != null;
-    
+
     // Labels based on whether custom range is selected
     final String label1 = hasCustomRange ? 'Rentang Awal' : 'Hari Ini';
     final String label2 = hasCustomRange ? 'Rentang Tengah' : 'Minggu Ini';
     final String label3 = hasCustomRange ? 'Rentang Akhir' : 'Bulan Ini';
     final String label4 = hasCustomRange ? 'Total Rentang' : 'Total';
-    
+
     // Icons based on context
-    final IconData icon1 = hasCustomRange ? Icons.calendar_view_day : Icons.today;
+    final IconData icon1 = hasCustomRange
+        ? Icons.calendar_view_day
+        : Icons.today;
     final IconData icon2 = hasCustomRange ? Icons.view_week : Icons.date_range;
-    final IconData icon3 = hasCustomRange ? Icons.calendar_view_month : Icons.calendar_month;
+    final IconData icon3 = hasCustomRange
+        ? Icons.calendar_view_month
+        : Icons.calendar_month;
     final IconData icon4 = Icons.all_inclusive;
-    
+
     return Column(
       children: [
         if (hasCustomRange)
@@ -437,7 +441,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               const SizedBox(height: 12),
               Text(
                 value,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
@@ -462,7 +469,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     );
   }
 
-  Widget _buildSalesChart(List<Map<String, dynamic>> chartData, Map<String, dynamic>? stats) {
+  Widget _buildSalesChart(
+    List<Map<String, dynamic>> chartData,
+    Map<String, dynamic>? stats,
+  ) {
     if (chartData.isEmpty) {
       return Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -481,16 +491,19 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     final groupingType = stats?['chart_grouping'] ?? 'daily';
     final dateRange = stats?['date_range'];
     String chartTitle;
-    
+
     if (dateRange != null) {
       final start = DateTime.parse(dateRange['start']);
       final end = DateTime.parse(dateRange['end']);
       if (groupingType == 'monthly') {
-        chartTitle = 'Penjualan Bulanan (${DateFormat('MMM yyyy').format(start)} - ${DateFormat('MMM yyyy').format(end)})';
+        chartTitle =
+            'Penjualan Bulanan (${DateFormat('MMM yyyy').format(start)} - ${DateFormat('MMM yyyy').format(end)})';
       } else if (groupingType == 'weekly') {
-        chartTitle = 'Penjualan Mingguan (${DateFormat('dd MMM').format(start)} - ${DateFormat('dd MMM yyyy').format(end)})';
+        chartTitle =
+            'Penjualan Mingguan (${DateFormat('dd MMM').format(start)} - ${DateFormat('dd MMM yyyy').format(end)})';
       } else {
-        chartTitle = 'Penjualan Harian (${DateFormat('dd MMM').format(start)} - ${DateFormat('dd MMM yyyy').format(end)})';
+        chartTitle =
+            'Penjualan Harian (${DateFormat('dd MMM').format(start)} - ${DateFormat('dd MMM yyyy').format(end)})';
       }
     } else {
       chartTitle = 'Penjualan 7 Hari Terakhir';
@@ -508,19 +521,28 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                 Expanded(
                   child: Text(
                     chartTitle,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
                 if (groupingType != 'daily')
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFC20E).withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       groupingType == 'monthly' ? 'Per Bulan' : 'Per Minggu',
-                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
               ],
@@ -536,7 +558,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     enabled: true,
                     touchTooltipData: BarTouchTooltipData(
                       getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                        final label = chartData[group.x.toInt()]['date'] as String;
+                        final label =
+                            chartData[group.x.toInt()]['date'] as String;
                         return BarTooltipItem(
                           '$label\nRp ${_formatPrice(rod.toY)}',
                           const TextStyle(
@@ -564,13 +587,27 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                           if (index >= 0 && index < chartData.length) {
                             final dateStr = chartData[index]['date'] as String;
                             String label;
-                            
+
                             if (groupingType == 'monthly') {
                               // Format: 2018-01 -> Jan'18
                               final parts = dateStr.split('-');
                               final month = int.parse(parts[1]);
                               final year = parts[0].substring(2);
-                              final monthNames = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
+                              final monthNames = [
+                                '',
+                                'Jan',
+                                'Feb',
+                                'Mar',
+                                'Apr',
+                                'Mei',
+                                'Jun',
+                                'Jul',
+                                'Agt',
+                                'Sep',
+                                'Okt',
+                                'Nov',
+                                'Des',
+                              ];
                               label = "${monthNames[month]}'$year";
                             } else if (groupingType == 'weekly') {
                               // Format: 2018-W01 -> W01
@@ -580,7 +617,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                               final date = DateTime.parse(dateStr);
                               label = DateFormat('dd/MM').format(date);
                             }
-                            
+
                             return Padding(
                               padding: const EdgeInsets.only(top: 8),
                               child: Text(
@@ -601,7 +638,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       sideTitles: SideTitles(
                         showTitles: true,
                         reservedSize: 50,
+                        interval: maxSales > 0 ? maxSales / 5 : 20,
                         getTitlesWidget: (value, meta) {
+                          // Jangan tampilkan label untuk nilai maksimum chart (maxY)
+                          if (value == meta.max) {
+                            return const SizedBox.shrink();
+                          }
                           return Text(
                             _formatCompactPrice(value),
                             style: const TextStyle(
@@ -614,10 +656,27 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     ),
                   ),
                   borderData: FlBorderData(show: false),
+                  extraLinesData: ExtraLinesData(
+                    horizontalLines: [
+                      HorizontalLine(
+                        y: maxSales > 0 ? maxSales * 1.2 : 100,
+                        color: Colors.grey.withOpacity(0.3),
+                        strokeWidth: 1,
+                        dashArray: [5, 5],
+                      ),
+                    ],
+                  ),
                   gridData: FlGridData(
                     show: true,
                     drawVerticalLine: false,
                     horizontalInterval: maxSales > 0 ? maxSales / 5 : 20,
+                    getDrawingHorizontalLine: (value) {
+                      return FlLine(
+                        color: Colors.grey.withOpacity(0.3),
+                        strokeWidth: 1,
+                        dashArray: [5, 5],
+                      );
+                    },
                   ),
                   barGroups: chartData.asMap().entries.map((entry) {
                     return BarChartGroupData(
@@ -626,7 +685,9 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                         BarChartRodData(
                           toY: entry.value['sales'] as double,
                           color: const Color(0xFFFFC20E),
-                          width: chartData.length > 20 ? 8 : (chartData.length > 10 ? 12 : 20),
+                          width: chartData.length > 20
+                              ? 8
+                              : (chartData.length > 10 ? 12 : 20),
                           borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(4),
                           ),
@@ -700,14 +761,25 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: Colors.green[50],
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFFFFC20E).withOpacity(0.2)
+                        : Colors.green[50],
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     'Top ${topProducts.length}',
-                    style: TextStyle(fontSize: 10, color: Colors.green[700], fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFFFFC20E)
+                          : Colors.green[700],
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
@@ -737,22 +809,32 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   ),
                   titlesData: FlTitlesData(
                     show: true,
-                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
                         getTitlesWidget: (value, meta) {
                           final index = value.toInt();
                           if (index >= 0 && index < topProducts.length) {
-                            final name = topProducts[index]['product_name'] as String;
+                            final name =
+                                topProducts[index]['product_name'] as String;
                             // Truncate long names
-                            final displayName = name.length > 8 ? '${name.substring(0, 6)}..' : name;
+                            final displayName = name.length > 8
+                                ? '${name.substring(0, 6)}..'
+                                : name;
                             return Padding(
                               padding: const EdgeInsets.only(top: 8),
                               child: Text(
                                 displayName,
-                                style: const TextStyle(fontSize: 8, color: Colors.grey),
+                                style: const TextStyle(
+                                  fontSize: 8,
+                                  color: Colors.grey,
+                                ),
                               ),
                             );
                           }
@@ -765,10 +847,17 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       sideTitles: SideTitles(
                         showTitles: true,
                         reservedSize: 40,
+                        interval: maxQuantity > 5 ? 2 : 1,
                         getTitlesWidget: (value, meta) {
+                          if (value == meta.max) {
+                            return const SizedBox.shrink();
+                          }
                           return Text(
                             value.toInt().toString(),
-                            style: const TextStyle(fontSize: 10, color: Colors.grey),
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey,
+                            ),
                           );
                         },
                       ),
@@ -778,7 +867,14 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   gridData: FlGridData(
                     show: true,
                     drawVerticalLine: false,
-                    horizontalInterval: maxQuantity > 0 ? maxQuantity / 5 : 20,
+                    horizontalInterval: maxQuantity > 5 ? 2 : 1,
+                    getDrawingHorizontalLine: (value) {
+                      return FlLine(
+                        color: Colors.grey.withOpacity(0.3),
+                        strokeWidth: 1,
+                        dashArray: [5, 5],
+                      );
+                    },
                   ),
                   barGroups: topProducts.asMap().entries.map((entry) {
                     return BarChartGroupData(
@@ -788,7 +884,9 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                           toY: (entry.value['quantity'] as int).toDouble(),
                           color: colors[entry.key % colors.length],
                           width: topProducts.length > 7 ? 12 : 20,
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(4),
+                          ),
                         ),
                       ],
                     );
@@ -800,10 +898,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             // Legend / product list
             Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(8),
-              ),
               child: Column(
                 children: topProducts.take(5).map((product) {
                   final index = topProducts.indexOf(product);
@@ -821,7 +915,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                           child: Center(
                             child: Text(
                               '${index + 1}',
-                              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),
@@ -835,7 +932,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                         ),
                         Text(
                           '${product['quantity']} terjual',
-                          style: TextStyle(fontSize: 11, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ],
                     ),
@@ -850,8 +951,9 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   }
 
   Widget _buildDateRangeFilter(OrderProvider provider) {
-    final hasDateRange = provider.statsStartDate != null && provider.statsEndDate != null;
-    
+    final hasDateRange =
+        provider.statsStartDate != null && provider.statsEndDate != null;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -864,10 +966,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                 const SizedBox(width: 8),
                 const Text(
                   'Filter Tanggal',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
                 if (hasDateRange)
@@ -875,14 +974,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     onPressed: () => provider.clearStatsDateRange(),
                     icon: const Icon(Icons.clear, size: 18),
                     label: const Text('Reset'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.red,
-                    ),
+                    style: TextButton.styleFrom(foregroundColor: Colors.red),
                   ),
               ],
             ),
             const SizedBox(height: 12),
-            
+
             // Quick select buttons
             Wrap(
               spacing: 8,
@@ -917,24 +1014,39 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   provider.setStatsDateRange(start, end);
                 }),
                 _buildQuickSelectChip('2018', () {
-                  provider.setStatsDateRange(DateTime(2018, 1, 1), DateTime(2018, 12, 31));
+                  provider.setStatsDateRange(
+                    DateTime(2018, 1, 1),
+                    DateTime(2018, 12, 31),
+                  );
                 }),
                 _buildQuickSelectChip('2017', () {
-                  provider.setStatsDateRange(DateTime(2017, 1, 1), DateTime(2017, 12, 31));
+                  provider.setStatsDateRange(
+                    DateTime(2017, 1, 1),
+                    DateTime(2017, 12, 31),
+                  );
                 }),
                 _buildQuickSelectChip('2016', () {
-                  provider.setStatsDateRange(DateTime(2016, 1, 1), DateTime(2016, 12, 31));
+                  provider.setStatsDateRange(
+                    DateTime(2016, 1, 1),
+                    DateTime(2016, 12, 31),
+                  );
                 }),
                 _buildQuickSelectChip('2015', () {
-                  provider.setStatsDateRange(DateTime(2015, 1, 1), DateTime(2015, 12, 31));
+                  provider.setStatsDateRange(
+                    DateTime(2015, 1, 1),
+                    DateTime(2015, 12, 31),
+                  );
                 }),
               ],
             ),
             const SizedBox(height: 12),
-            
+
             if (hasDateRange)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFC20E).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -942,7 +1054,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.calendar_today, size: 16, color: Color(0xFFFFC20E)),
+                    const Icon(
+                      Icons.calendar_today,
+                      size: 16,
+                      color: Color(0xFFFFC20E),
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       '${DateFormat('dd MMM yyyy').format(provider.statsStartDate!)} - ${DateFormat('dd MMM yyyy').format(provider.statsEndDate!)}',
@@ -987,21 +1103,22 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: Colors.grey[400]!),
         ),
-        child: Text(
-          label,
-          style: const TextStyle(fontSize: 12),
-        ),
+        child: Text(label, style: const TextStyle(fontSize: 12)),
       ),
     );
   }
 
-  Future<void> _showDateRangePicker(BuildContext context, OrderProvider provider) async {
+  Future<void> _showDateRangePicker(
+    BuildContext context,
+    OrderProvider provider,
+  ) async {
     final DateTimeRange? picked = await showDateRangePicker(
       context: context,
       firstDate: DateTime(2015, 1, 1), // Support data dari 2015
       lastDate: DateTime.now(),
       currentDate: DateTime.now(), // Untuk navigasi hari ini
-      initialDateRange: provider.statsStartDate != null && provider.statsEndDate != null
+      initialDateRange:
+          provider.statsStartDate != null && provider.statsEndDate != null
           ? DateTimeRange(
               start: provider.statsStartDate!,
               end: provider.statsEndDate!,
