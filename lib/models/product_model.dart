@@ -10,6 +10,7 @@ class ProductModel {
   final DateTime createdAt;
   final double averageRating;
   final int totalReviews;
+  final List<String> availableSizes; // Size variants
 
   ProductModel({
     required this.id,
@@ -23,7 +24,37 @@ class ProductModel {
     required this.createdAt,
     this.averageRating = 0.0,
     this.totalReviews = 0,
+    this.availableSizes = const [],
   });
+
+  // Check if product has sizes
+  bool get hasSizes => availableSizes.isNotEmpty;
+  
+  // Get default sizes based on category
+  static List<String> getDefaultSizesForCategory(String category) {
+    switch (category) {
+      case ProductCategory.sepatu:
+        return ['38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48', '49'];
+      case ProductCategory.kaos:
+      case ProductCategory.kemeja:
+      case ProductCategory.jaket:
+      case ProductCategory.celana:
+        return ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+      default:
+        return [];
+    }
+  }
+  
+  // Check if category supports sizes
+  static bool categorySupportsSizes(String category) {
+    return [
+      ProductCategory.sepatu,
+      ProductCategory.kaos,
+      ProductCategory.kemeja,
+      ProductCategory.jaket,
+      ProductCategory.celana,
+    ].contains(category);
+  }
 
   // Get all images (primary + additional)
   List<String> get allImages {
@@ -59,6 +90,28 @@ class ProductModel {
         }
       }
     }
+    
+    // Parse available_sizes array
+    List<String> availableSizes = [];
+    if (json['available_sizes'] != null) {
+      if (json['available_sizes'] is List) {
+        availableSizes = List<String>.from(json['available_sizes']);
+      } else if (json['available_sizes'] is String) {
+        try {
+          final parsed = json['available_sizes'];
+          if (parsed is String && parsed.startsWith('[')) {
+            availableSizes = List<String>.from(
+              (parsed.replaceAll('[', '').replaceAll(']', '').replaceAll('"', ''))
+                  .split(',')
+                  .map((e) => e.trim())
+                  .where((e) => e.isNotEmpty),
+            );
+          }
+        } catch (_) {
+          availableSizes = [];
+        }
+      }
+    }
 
     return ProductModel(
       id: json['id'] ?? '',
@@ -74,6 +127,7 @@ class ProductModel {
       ),
       averageRating: (json['average_rating'] ?? 0).toDouble(),
       totalReviews: json['total_reviews'] ?? 0,
+      availableSizes: availableSizes,
     );
   }
 
@@ -88,6 +142,7 @@ class ProductModel {
       'image_urls': imageUrls,
       'stock': stock,
       'created_at': createdAt.toIso8601String(),
+      'available_sizes': availableSizes,
     };
   }
 
@@ -100,6 +155,7 @@ class ProductModel {
       'image_url': imageUrl,
       'image_urls': imageUrls,
       'stock': stock,
+      'available_sizes': availableSizes,
     };
   }
 
@@ -115,6 +171,7 @@ class ProductModel {
     DateTime? createdAt,
     double? averageRating,
     int? totalReviews,
+    List<String>? availableSizes,
   }) {
     return ProductModel(
       id: id ?? this.id,
@@ -128,6 +185,7 @@ class ProductModel {
       createdAt: createdAt ?? this.createdAt,
       averageRating: averageRating ?? this.averageRating,
       totalReviews: totalReviews ?? this.totalReviews,
+      availableSizes: availableSizes ?? this.availableSizes,
     );
   }
 }

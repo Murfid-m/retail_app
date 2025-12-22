@@ -17,6 +17,7 @@ class OrderProvider with ChangeNotifier {
   String? _error;
   Map<String, dynamic>? _statistics;
   List<Map<String, dynamic>> _chartData = [];
+  List<Map<String, dynamic>> _topProducts = [];
   
   // Filter properties
   Set<String> _selectedStatuses = <String>{};
@@ -36,6 +37,7 @@ class OrderProvider with ChangeNotifier {
   String? get error => _error;
   Map<String, dynamic>? get statistics => _statistics;
   List<Map<String, dynamic>> get chartData => _chartData;
+  List<Map<String, dynamic>> get topProducts => _topProducts;
   Set<String> get selectedStatuses => _selectedStatuses;
   String get searchQuery => _searchQuery;
   DateTime? get startDate => _startDate;
@@ -156,11 +158,19 @@ Future<void> loadStatistics() async {
               'sales': (e['sales'] as num).toDouble(),
             })
         .toList();
+    
+    // Load top products
+    _topProducts = await statisticsService.loadTopProducts(
+      startDate: _statsStartDate,
+      endDate: _statsEndDate,
+      limit: 10,
+    );
   } catch (e) {
     print('❌ OrderProvider error: $e');
     _error = e.toString();
     _statistics = null;
     _chartData = [];
+    _topProducts = [];
   }
 
   _isLoading = false;

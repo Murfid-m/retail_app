@@ -23,6 +23,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   final _priceController = TextEditingController();
   final _stockController = TextEditingController();
   String _selectedCategory = ProductCategory.kaos;
+  List<String> _selectedSizes = []; // Selected sizes for the product
 
   // Image related - Multi-image support
   List<String> _imageUrls = []; // Existing image URLs
@@ -44,6 +45,10 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       _stockController.text = widget.product!.stock.toString();
       _imageUrls = List.from(widget.product!.allImages);
       _selectedCategory = widget.product!.category;
+      _selectedSizes = List.from(widget.product!.availableSizes);
+    } else {
+      // Set default sizes based on initial category
+      _selectedSizes = List.from(ProductModel.getDefaultSizesForCategory(_selectedCategory));
     }
   }
 
@@ -316,6 +321,111 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     );
   }
 
+  Widget _buildSizeSelector() {
+    final allSizes = ProductModel.getDefaultSizesForCategory(_selectedCategory);
+    final isShoeCategory = _selectedCategory == ProductCategory.sepatu;
+    
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  isShoeCategory ? Icons.straighten : Icons.format_size,
+                  color: const Color(0xFFFFC20E),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  isShoeCategory ? 'Ukuran Sepatu Tersedia' : 'Ukuran Tersedia',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      if (_selectedSizes.length == allSizes.length) {
+                        _selectedSizes.clear();
+                      } else {
+                        _selectedSizes = List.from(allSizes);
+                      }
+                    });
+                  },
+                  child: Text(
+                    _selectedSizes.length == allSizes.length 
+                        ? 'Hapus Semua' 
+                        : 'Pilih Semua',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Pilih ukuran yang tersedia untuk produk ini',
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: allSizes.map((size) {
+                final isSelected = _selectedSizes.contains(size);
+                return InkWell(
+                  onTap: () {
+                    setState(() {
+                      if (isSelected) {
+                        _selectedSizes.remove(size);
+                      } else {
+                        _selectedSizes.add(size);
+                      }
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    constraints: BoxConstraints(
+                      minWidth: isShoeCategory ? 45 : 50,
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFFFFC20E) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isSelected ? const Color(0xFFFFC20E) : Colors.grey[300]!,
+                        width: isSelected ? 2 : 1,
+                      ),
+                    ),
+                    child: Text(
+                      size,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected ? Colors.black : Colors.grey[700],
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Terpilih: ${_selectedSizes.length} ukuran',
+              style: TextStyle(
+                color: _selectedSizes.isEmpty ? Colors.red : Colors.grey[600],
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _saveProduct() async {
     if (_formKey.currentState!.validate()) {
       // Check if at least one image exists
@@ -364,6 +474,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         createdAt: widget.product?.createdAt ?? DateTime.now(),
         averageRating: widget.product?.averageRating ?? 0,
         totalReviews: widget.product?.totalReviews ?? 0,
+        availableSizes: _selectedSizes,
       );
 
       bool success;
@@ -464,10 +575,20 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                 onChanged: (value) {
                   setState(() {
                     _selectedCategory = value ?? ProductCategory.kaos;
+                    // Update sizes when category changes (only if not editing)
+                    if (!_isEditing || _selectedSizes.isEmpty) {
+                      _selectedSizes = List.from(
+                        ProductModel.getDefaultSizesForCategory(_selectedCategory),
+                      );
+                    }
                   });
                 },
               ),
               const SizedBox(height: 16),
+              
+              // Size selector (only for categories that support sizes)
+              if (ProductModel.categorySupportsSizes(_selectedCategory))
+                _buildSizeSelector(),
 
               // Price field
               TextFormField(

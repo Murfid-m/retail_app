@@ -152,9 +152,31 @@ class CartScreen extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    item.product.category,
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  Row(
+                    children: [
+                      Text(
+                        item.product.category,
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      ),
+                      if (item.selectedSize != null) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFC20E).withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'Ukuran: ${item.selectedSize}',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFFB38A00),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -174,7 +196,7 @@ class CartScreen extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
                   onPressed: () {
-                    cart.removeFromCart(item.product.id);
+                    cart.removeCartItem(item.id);
                   },
                 ),
                 Container(
@@ -186,7 +208,7 @@ class CartScreen extends StatelessWidget {
                     children: [
                       InkWell(
                         onTap: () {
-                          cart.decrementQuantity(item.product.id);
+                          cart.decrementQuantity(item.product.id, selectedSize: item.selectedSize);
                         },
                         child: const Padding(
                           padding: EdgeInsets.all(8),
@@ -203,7 +225,7 @@ class CartScreen extends StatelessWidget {
                       InkWell(
                         onTap: item.product.stock > item.quantity
                             ? () {
-                                cart.incrementQuantity(item.product.id);
+                                cart.incrementQuantity(item.product.id, selectedSize: item.selectedSize);
                               }
                             : null,
                         child: Padding(
