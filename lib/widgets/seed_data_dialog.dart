@@ -27,10 +27,8 @@ class _SeedDataDialogState extends State<SeedDataDialog> {
         content: const Text(
           'Ini akan menghapus semua data order testing yang di-seed sebelumnya.\n\n'
           'Data yang akan dihapus:\n'
-          '• Orders dengan nama "Customer..."\n'
-          '• Orders dengan nama "Sample..."\n'
-          '• Orders dengan email "@example.com"\n\n'
-          'Data order asli tidak akan terpengaruh.',
+          '• Orders dengan prefix "[SEED]"\n\n'
+          'Data order asli TIDAK akan terpengaruh.',
         ),
         actions: [
           TextButton(
@@ -145,9 +143,9 @@ class _SeedDataDialogState extends State<SeedDataDialog> {
 
           await supabase.from('orders').insert({
             'user_id': userId,
-            'user_name': 'Customer $date-${i + 1}',
+            'user_name': '[SEED] Customer $date-${i + 1}',
             'user_phone': '0812345678${(batchCount * 10 + i) % 100}'.padRight(12, '0'),
-            'user_email': 'customer_${date.replaceAll('-', '')}_${i + 1}@example.com',
+            'user_email': 'seed_${date.replaceAll('-', '')}_${i + 1}@example.com',
             'shipping_address': 'Jakarta, Indonesia',
             'total_amount': orderValue,
             'status': 'completed',
@@ -166,9 +164,9 @@ class _SeedDataDialogState extends State<SeedDataDialog> {
 
         await supabase.from('orders').insert({
           'user_id': userId,
-          'user_name': 'Customer Bulan Ini ${i + 1}',
+          'user_name': '[SEED] Customer Bulan Ini ${i + 1}',
           'user_phone': '0812345678${i % 100}'.padRight(12, '0'),
-          'user_email': 'recent${i + 1}@example.com',
+          'user_email': 'seed_recent${i + 1}@example.com',
           'shipping_address': 'Jakarta, Indonesia',
           'total_amount': amount,
           'status': 'completed',
@@ -185,9 +183,9 @@ class _SeedDataDialogState extends State<SeedDataDialog> {
 
         await supabase.from('orders').insert({
           'user_id': userId,
-          'user_name': 'Customer Hari Ini ${i + 1}',
+          'user_name': '[SEED] Customer Hari Ini ${i + 1}',
           'user_phone': '0812345678${i % 100}'.padRight(12, '0'),
-          'user_email': 'today${i + 1}@example.com',
+          'user_email': 'seed_today${i + 1}@example.com',
           'shipping_address': 'Jakarta, Indonesia',
           'total_amount': amount,
           'status': 'completed',
@@ -244,7 +242,7 @@ class _SeedDataDialogState extends State<SeedDataDialog> {
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Data seed menggunakan daily_sales dari dashboard_data.json (2015-2018)',
+                    'Data seed menggunakan prefix [SEED] sehingga tidak akan menghapus order asli.',
                     style: TextStyle(fontSize: 12, color: Colors.blue),
                   ),
                 ),

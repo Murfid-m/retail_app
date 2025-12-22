@@ -22,6 +22,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     ProductManagementScreen(),
     OrderManagementScreen(),
     StatisticsScreen(),
+    LowStockScreen(),
   ];
 
   @override

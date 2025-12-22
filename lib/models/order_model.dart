@@ -5,6 +5,7 @@ class OrderItem {
   final double price;
   final int quantity;
   final String imageUrl;
+  final String? selectedSize;
 
   OrderItem({
     required this.id,
@@ -13,6 +14,7 @@ class OrderItem {
     required this.price,
     required this.quantity,
     required this.imageUrl,
+    this.selectedSize,
   });
 
   double get totalPrice => price * quantity;
@@ -25,6 +27,7 @@ class OrderItem {
       price: (json['price'] ?? 0).toDouble(),
       quantity: json['quantity'] ?? 1,
       imageUrl: json['image_url'] ?? '',
+      selectedSize: json['selected_size'],
     );
   }
 
@@ -35,6 +38,7 @@ class OrderItem {
       'price': price,
       'quantity': quantity,
       'image_url': imageUrl,
+      'selected_size': selectedSize,
     };
   }
 }

@@ -289,6 +289,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       // Sales chart
                       _buildSalesChart(orderProvider.chartData, orderProvider.statistics),
                       const SizedBox(height: 16),
+                      
+                      // Top products chart
+                      _buildTopProductsChart(orderProvider.topProducts),
+                      const SizedBox(height: 16),
                     ],
                   ),
                 ),
@@ -302,27 +306,68 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   }
 
   Widget _buildStatisticsCards(Map<String, dynamic> stats) {
+    // Check if custom date range is set
+    final dateRange = stats['date_range'];
+    final hasCustomRange = dateRange != null;
+    
+    // Labels based on whether custom range is selected
+    final String label1 = hasCustomRange ? 'Rentang Awal' : 'Hari Ini';
+    final String label2 = hasCustomRange ? 'Rentang Tengah' : 'Minggu Ini';
+    final String label3 = hasCustomRange ? 'Rentang Akhir' : 'Bulan Ini';
+    final String label4 = hasCustomRange ? 'Total Rentang' : 'Total';
+    
+    // Icons based on context
+    final IconData icon1 = hasCustomRange ? Icons.calendar_view_day : Icons.today;
+    final IconData icon2 = hasCustomRange ? Icons.view_week : Icons.date_range;
+    final IconData icon3 = hasCustomRange ? Icons.calendar_view_month : Icons.calendar_month;
+    final IconData icon4 = Icons.all_inclusive;
+    
     return Column(
       children: [
+        if (hasCustomRange)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue[200]!),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, size: 16, color: Colors.blue),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Menampilkan statistik untuk rentang ${DateFormat('dd MMM yyyy').format(DateTime.parse(dateRange['start']))} - ${DateFormat('dd MMM yyyy').format(DateTime.parse(dateRange['end']))}',
+                      style: const TextStyle(fontSize: 12, color: Colors.blue),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         Row(
           children: [
             Expanded(
               child: _buildStatCard(
-                'Hari Ini',
+                label1,
                 'Rp ${_formatPrice(stats['daily']['sales'])}',
                 '${stats['daily']['count']} pesanan',
                 Colors.blue,
-                Icons.today,
+                icon1,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _buildStatCard(
-                'Minggu Ini',
+                label2,
                 'Rp ${_formatPrice(stats['weekly']['sales'])}',
                 '${stats['weekly']['count']} pesanan',
                 Colors.green,
-                Icons.date_range,
+                icon2,
               ),
             ),
           ],
@@ -332,21 +377,21 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           children: [
             Expanded(
               child: _buildStatCard(
-                'Bulan Ini',
+                label3,
                 'Rp ${_formatPrice(stats['monthly']['sales'])}',
                 '${stats['monthly']['count']} pesanan',
                 Colors.orange,
-                Icons.calendar_month,
+                icon3,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _buildStatCard(
-                'Total',
+                label4,
                 'Rp ${_formatPrice(stats['total']['sales'])}',
                 '${stats['total']['count']} pesanan',
                 Colors.purple,
-                Icons.all_inclusive,
+                icon4,
               ),
             ),
           ],
@@ -605,6 +650,203 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       return '${(price / 1000).toStringAsFixed(0)}K';
     }
     return price.toStringAsFixed(0);
+  }
+
+  Widget _buildTopProductsChart(List<Map<String, dynamic>> topProducts) {
+    if (topProducts.isEmpty) {
+      return Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: const Padding(
+          padding: EdgeInsets.all(16),
+          child: Center(child: Text('Tidak ada data produk untuk ditampilkan')),
+        ),
+      );
+    }
+
+    final maxQuantity = topProducts
+        .map((e) => (e['quantity'] as int))
+        .reduce((a, b) => a > b ? a : b)
+        .toDouble();
+
+    // Colors for bars
+    final colors = [
+      Colors.amber,
+      Colors.orange,
+      Colors.deepOrange,
+      Colors.red,
+      Colors.pink,
+      Colors.purple,
+      Colors.deepPurple,
+      Colors.indigo,
+      Colors.blue,
+      Colors.cyan,
+    ];
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.emoji_events, color: Color(0xFFFFC20E)),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Produk Terlaris',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.green[50],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'Top ${topProducts.length}',
+                    style: TextStyle(fontSize: 10, color: Colors.green[700], fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 250,
+              child: BarChart(
+                BarChartData(
+                  alignment: BarChartAlignment.spaceAround,
+                  maxY: maxQuantity > 0 ? maxQuantity * 1.2 : 100,
+                  barTouchData: BarTouchData(
+                    enabled: true,
+                    touchTooltipData: BarTouchTooltipData(
+                      getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                        final product = topProducts[group.x.toInt()];
+                        return BarTooltipItem(
+                          '${product['product_name']}\n${product['quantity']} terjual\nRp ${_formatPrice((product['revenue'] as double))}',
+                          const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  titlesData: FlTitlesData(
+                    show: true,
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, meta) {
+                          final index = value.toInt();
+                          if (index >= 0 && index < topProducts.length) {
+                            final name = topProducts[index]['product_name'] as String;
+                            // Truncate long names
+                            final displayName = name.length > 8 ? '${name.substring(0, 6)}..' : name;
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                displayName,
+                                style: const TextStyle(fontSize: 8, color: Colors.grey),
+                              ),
+                            );
+                          }
+                          return const Text('');
+                        },
+                        reservedSize: 30,
+                      ),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 40,
+                        getTitlesWidget: (value, meta) {
+                          return Text(
+                            value.toInt().toString(),
+                            style: const TextStyle(fontSize: 10, color: Colors.grey),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    horizontalInterval: maxQuantity > 0 ? maxQuantity / 5 : 20,
+                  ),
+                  barGroups: topProducts.asMap().entries.map((entry) {
+                    return BarChartGroupData(
+                      x: entry.key,
+                      barRods: [
+                        BarChartRodData(
+                          toY: (entry.value['quantity'] as int).toDouble(),
+                          color: colors[entry.key % colors.length],
+                          width: topProducts.length > 7 ? 12 : 20,
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Legend / product list
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                children: topProducts.take(5).map((product) {
+                  final index = topProducts.indexOf(product);
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: colors[index % colors.length],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Center(
+                            child: Text(
+                              '${index + 1}',
+                              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            product['product_name'] as String,
+                            style: const TextStyle(fontSize: 12),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Text(
+                          '${product['quantity']} terjual',
+                          style: TextStyle(fontSize: 11, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildDateRangeFilter(OrderProvider provider) {

@@ -227,6 +227,68 @@ class StatisticsService {
     }
   }
   
+  // Load top selling products
+  Future<List<Map<String, dynamic>>> loadTopProducts({DateTime? startDate, DateTime? endDate, int limit = 10}) async {
+    try {
+      print('📊 Loading top products...');
+      
+      // Get all orders with items
+      var query = _supabase
+          .from('orders')
+          .select('order_items(product_id, product_name, quantity, price), created_at, status');
+      
+      // Apply date range if provided
+      if (startDate != null && endDate != null) {
+        final start = DateTime(startDate.year, startDate.month, startDate.day);
+        final end = DateTime(endDate.year, endDate.month, endDate.day, 23, 59, 59);
+        query = query.gte('created_at', start.toIso8601String()).lte('created_at', end.toIso8601String());
+      }
+      
+      final ordersResponse = await query;
+      final orders = ordersResponse as List;
+      
+      // Aggregate product sales
+      Map<String, Map<String, dynamic>> productSales = {};
+      
+      for (var order in orders) {
+        // Skip cancelled orders
+        final status = order['status']?.toString().toLowerCase() ?? '';
+        if (status == 'cancelled' || status == 'canceled') {
+          continue;
+        }
+        
+        final items = order['order_items'] as List? ?? [];
+        for (var item in items) {
+          final productId = item['product_id'] as String? ?? 'unknown';
+          final productName = item['product_name'] as String? ?? 'Unknown Product';
+          final quantity = (item['quantity'] as num?)?.toInt() ?? 1;
+          final price = (item['price'] as num?)?.toDouble() ?? 0.0;
+          
+          if (productSales.containsKey(productId)) {
+            productSales[productId]!['quantity'] += quantity;
+            productSales[productId]!['revenue'] += price * quantity;
+          } else {
+            productSales[productId] = {
+              'product_id': productId,
+              'product_name': productName,
+              'quantity': quantity,
+              'revenue': price * quantity,
+            };
+          }
+        }
+      }
+      
+      // Sort by quantity sold and get top N
+      final sortedProducts = productSales.values.toList()
+        ..sort((a, b) => (b['quantity'] as int).compareTo(a['quantity'] as int));
+      
+      return sortedProducts.take(limit).toList();
+    } catch (e) {
+      print('❌ Error loading top products: $e');
+      return [];
+    }
+  }
+  
   // Helper to get ISO week number
   int _getWeekNumber(DateTime date) {
     final firstDayOfYear = DateTime(date.year, 1, 1);
@@ -239,11 +301,11 @@ class StatisticsService {
     try {
       print('🗑️ Deleting seeded data...');
       
-      // Delete orders that look like test data
+      // Delete orders that have [SEED] prefix in user_name (unique identifier for seeded data)
       await _supabase
           .from('orders')
           .delete()
-          .or('user_name.like.Customer%,user_name.like.Sample%,user_email.like.%@example.com');
+          .like('user_name', '[SEED]%');
       
       print('✅ Seeded data deleted successfully');
       return true;
