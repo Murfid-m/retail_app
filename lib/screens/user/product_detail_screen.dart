@@ -19,9 +19,15 @@ class ProductDetailScreen extends StatefulWidget {
 }
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
+  String? _selectedSize;
+  
   @override
   void initState() {
     super.initState();
+    // Set default size if product has sizes
+    if (widget.product.hasSizes && widget.product.availableSizes.isNotEmpty) {
+      _selectedSize = widget.product.availableSizes.first;
+    }
     // Defer loading to avoid setState during build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadReviews();
@@ -177,6 +183,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
+                  
+                  // Size selector (if product has sizes)
+                  if (widget.product.hasSizes) ...[
+                    _buildSizeSelector(),
+                    const SizedBox(height: 24),
+                  ],
 
                   // Description
                   const Text(
@@ -204,6 +216,79 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ),
       ),
       bottomNavigationBar: _buildBottomBar(),
+    );
+  }
+
+  Widget _buildSizeSelector() {
+    final isShoeCategory = widget.product.category == ProductCategory.sepatu;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              isShoeCategory ? 'Pilih Ukuran Sepatu' : 'Pilih Ukuran',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const Spacer(),
+            if (_selectedSize != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFC20E).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Ukuran: $_selectedSize',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFFB38A00),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: widget.product.availableSizes.map((size) {
+            final isSelected = _selectedSize == size;
+            return InkWell(
+              onTap: () {
+                setState(() {
+                  _selectedSize = size;
+                });
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                constraints: BoxConstraints(
+                  minWidth: isShoeCategory ? 45 : 50,
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isSelected ? const Color(0xFFFFC20E) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isSelected ? const Color(0xFFFFC20E) : Colors.grey[300]!,
+                    width: isSelected ? 2 : 1,
+                  ),
+                ),
+                child: Text(
+                  size,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected ? Colors.black : Colors.grey[700],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 
@@ -271,6 +356,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Widget _buildBottomBar() {
+    // Check if size selection is required but not selected
+    final requiresSize = widget.product.hasSizes && _selectedSize == null;
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -286,8 +374,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       ),
       child: Consumer<CartProvider>(
         builder: (context, cart, child) {
-          final isInCart = cart.isInCart(widget.product.id);
-          final quantity = cart.getQuantity(widget.product.id);
+          final isInCart = cart.isInCart(widget.product.id, selectedSize: _selectedSize);
+          final quantity = cart.getQuantity(widget.product.id, selectedSize: _selectedSize);
 
           if (isInCart) {
             return Row(
@@ -304,21 +392,31 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         IconButton(
                           icon: const Icon(Icons.remove),
                           onPressed: () {
-                            cart.decrementQuantity(widget.product.id);
+                            cart.decrementQuantity(widget.product.id, selectedSize: _selectedSize);
                           },
                         ),
-                        Text(
-                          '$quantity',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '$quantity',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (_selectedSize != null)
+                              Text(
+                                'Ukuran: $_selectedSize',
+                                style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+                              ),
+                          ],
                         ),
                         IconButton(
                           icon: const Icon(Icons.add),
                           onPressed: widget.product.stock > quantity
                               ? () {
-                                  cart.incrementQuantity(widget.product.id);
+                                  cart.incrementQuantity(widget.product.id, selectedSize: _selectedSize);
                                 }
                               : null,
                         ),
@@ -346,13 +444,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           }
 
           return ElevatedButton(
-            onPressed: widget.product.stock > 0
+            onPressed: widget.product.stock > 0 && !requiresSize
                 ? () {
-                    cart.addToCart(widget.product);
+                    cart.addToCart(widget.product, selectedSize: _selectedSize);
+                    final sizeMsg = _selectedSize != null ? ' (Ukuran: $_selectedSize)' : '';
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Ditambahkan ke keranjang'),
-                        duration: Duration(seconds: 1),
+                      SnackBar(
+                        content: Text('Ditambahkan ke keranjang$sizeMsg'),
+                        duration: const Duration(seconds: 1),
                       ),
                     );
                   }
@@ -369,7 +468,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 const Icon(Icons.shopping_cart_outlined),
                 const SizedBox(width: 8),
                 Text(
-                  widget.product.stock > 0 ? 'Tambah ke Keranjang' : 'Stok Habis',
+                  widget.product.stock <= 0 
+                      ? 'Stok Habis' 
+                      : requiresSize 
+                          ? 'Pilih Ukuran Dulu' 
+                          : 'Tambah ke Keranjang',
                 ),
               ],
             ),

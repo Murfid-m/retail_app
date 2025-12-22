@@ -10,9 +10,12 @@ class CartProvider with ChangeNotifier {
   int get totalItems => _items.fold(0, (sum, item) => sum + item.quantity);
   double get totalPrice => _items.fold(0, (sum, item) => sum + item.totalPrice);
 
-  void addToCart(ProductModel product) {
+  void addToCart(ProductModel product, {String? selectedSize}) {
+    // Use unique key (product_id + size) for finding existing item
+    final uniqueKey = selectedSize != null ? '${product.id}_$selectedSize' : product.id;
+    
     final existingIndex = _items.indexWhere(
-      (item) => item.product.id == product.id,
+      (item) => item.uniqueKey == uniqueKey,
     );
 
     if (existingIndex != -1) {
@@ -23,19 +26,27 @@ class CartProvider with ChangeNotifier {
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           product: product,
           quantity: 1,
+          selectedSize: selectedSize,
         ),
       );
     }
     notifyListeners();
   }
 
-  void removeFromCart(String productId) {
-    _items.removeWhere((item) => item.product.id == productId);
+  void removeFromCart(String productId, {String? selectedSize}) {
+    final uniqueKey = selectedSize != null ? '${productId}_$selectedSize' : productId;
+    _items.removeWhere((item) => item.uniqueKey == uniqueKey);
+    notifyListeners();
+  }
+  
+  void removeCartItem(String cartItemId) {
+    _items.removeWhere((item) => item.id == cartItemId);
     notifyListeners();
   }
 
-  void updateQuantity(String productId, int quantity) {
-    final index = _items.indexWhere((item) => item.product.id == productId);
+  void updateQuantity(String productId, int quantity, {String? selectedSize}) {
+    final uniqueKey = selectedSize != null ? '${productId}_$selectedSize' : productId;
+    final index = _items.indexWhere((item) => item.uniqueKey == uniqueKey);
     if (index != -1) {
       if (quantity <= 0) {
         _items.removeAt(index);
@@ -46,16 +57,18 @@ class CartProvider with ChangeNotifier {
     }
   }
 
-  void incrementQuantity(String productId) {
-    final index = _items.indexWhere((item) => item.product.id == productId);
+  void incrementQuantity(String productId, {String? selectedSize}) {
+    final uniqueKey = selectedSize != null ? '${productId}_$selectedSize' : productId;
+    final index = _items.indexWhere((item) => item.uniqueKey == uniqueKey);
     if (index != -1) {
       _items[index].quantity++;
       notifyListeners();
     }
   }
 
-  void decrementQuantity(String productId) {
-    final index = _items.indexWhere((item) => item.product.id == productId);
+  void decrementQuantity(String productId, {String? selectedSize}) {
+    final uniqueKey = selectedSize != null ? '${productId}_$selectedSize' : productId;
+    final index = _items.indexWhere((item) => item.uniqueKey == uniqueKey);
     if (index != -1) {
       if (_items[index].quantity > 1) {
         _items[index].quantity--;
@@ -71,13 +84,20 @@ class CartProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  bool isInCart(String productId) {
+  bool isInCart(String productId, {String? selectedSize}) {
+    final uniqueKey = selectedSize != null ? '${productId}_$selectedSize' : productId;
+    return _items.any((item) => item.uniqueKey == uniqueKey);
+  }
+  
+  // Check if any variant of product is in cart
+  bool isProductInCart(String productId) {
     return _items.any((item) => item.product.id == productId);
   }
 
-  int getQuantity(String productId) {
+  int getQuantity(String productId, {String? selectedSize}) {
+    final uniqueKey = selectedSize != null ? '${productId}_$selectedSize' : productId;
     final item = _items.firstWhere(
-      (item) => item.product.id == productId,
+      (item) => item.uniqueKey == uniqueKey,
       orElse: () => CartItem(
         id: '',
         product: ProductModel(
@@ -94,5 +114,12 @@ class CartProvider with ChangeNotifier {
       ),
     );
     return item.quantity;
+  }
+  
+  // Get total quantity for a product (all sizes)
+  int getTotalQuantityForProduct(String productId) {
+    return _items
+        .where((item) => item.product.id == productId)
+        .fold(0, (sum, item) => sum + item.quantity);
   }
 }

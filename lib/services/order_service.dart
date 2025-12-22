@@ -45,6 +45,7 @@ class OrderService {
           'price': item.product.price,
           'quantity': item.quantity,
           'image_url': item.product.imageUrl,
+          'selected_size': item.selectedSize,
         });
 
         // Update product stock
