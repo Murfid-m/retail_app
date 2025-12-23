@@ -664,13 +664,21 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
       summaryText += ' dengan filter: ${activeFilters.join(', ')}';
     }
     
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).primaryColor.withOpacity(0.1),
+        color: isDark 
+            ? const Color(0xFFFFC20E).withOpacity(0.15) 
+            : Theme.of(context).primaryColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).primaryColor.withOpacity(0.2)),
+        border: Border.all(
+          color: isDark 
+              ? const Color(0xFFFFC20E).withOpacity(0.3) 
+              : Theme.of(context).primaryColor.withOpacity(0.2),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -680,7 +688,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Theme.of(context).primaryColor,
+              color: isDark ? const Color(0xFFFFC20E) : Theme.of(context).primaryColor,
             ),
           ),
           const SizedBox(height: 8),

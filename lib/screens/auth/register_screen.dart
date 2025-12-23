@@ -83,6 +83,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const yellowColor = Color(0xFFFFC20E);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Daftar')),
       body: SafeArea(
@@ -172,13 +175,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 // Address field
                 TextFormField(
                   controller: _addressController,
+                  minLines: 1,
                   maxLines: 3,
                   decoration: InputDecoration(
                     labelText: 'Alamat',
-                    prefixIcon: const Padding(
-                      padding: EdgeInsets.only(bottom: 50),
-                      child: Icon(Icons.location_on_outlined),
-                    ),
+                    prefixIcon: const Icon(Icons.location_on_outlined),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -268,16 +269,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     return ElevatedButton(
                       onPressed: auth.isLoading ? null : _register,
                       style: ElevatedButton.styleFrom(
+                        backgroundColor: isDark ? yellowColor : null,
+                        foregroundColor: isDark ? Colors.black : null,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       child: auth.isLoading
-                          ? const SizedBox(
+                          ? SizedBox(
                               height: 20,
                               width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: isDark ? Colors.black : null,
+                              ),
                             )
                           : const Text(
                               'Daftar',
