@@ -163,50 +163,57 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     int maxLines = 1,
     String? Function(String?)? validator,
   }) async {
-    final controller = TextEditingController(text: currentValue);
-    final result = await showDialog<String>(
+    String? result;
+    await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Edit $title'),
-        content: TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          maxLines: maxLines,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: hint,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final value = controller.text.trim();
-              if (validator != null) {
-                final error = validator(value);
-                if (error != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(error)),
-                  );
-                  return;
-                }
-              }
-              Navigator.pop(context, value);
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
+      builder: (dialogContext) {
+        final controller = TextEditingController(text: currentValue);
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Edit $title'),
+              content: TextFormField(
+                controller: controller,
+                keyboardType: keyboardType,
+                maxLines: maxLines,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: hint,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Batal'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    final value = controller.text.trim();
+                    if (validator != null) {
+                      final error = validator(value);
+                      if (error != null) {
+                        ScaffoldMessenger.of(dialogContext).showSnackBar(
+                          SnackBar(content: Text(error)),
+                        );
+                        return;
+                      }
+                    }
+                    result = value;
+                    Navigator.pop(dialogContext);
+                  },
+                  child: const Text('Simpan'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
 
     if (result != null && result != currentValue) {
-      await _saveProfile(fieldName, result);
+      await _saveProfile(fieldName, result!);
     }
-    controller.dispose();
   }
 
   Future<void> _saveProfile(String field, String value) async {

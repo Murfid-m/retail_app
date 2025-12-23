@@ -235,11 +235,13 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   Widget _buildOrderItem(OrderItem item, bool isDelivered, String? userId) {
     final isReviewed = _reviewedItems[item.productId] ?? false;
     final existingReview = _existingReviews[item.productId];
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const yellowColor = Color(0xFFFFC20E);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             width: 50,
@@ -281,12 +283,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                   '${item.quantity}x Rp ${_formatPrice(item.price)}',
                   style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
-                // Show existing rating or review button for delivered orders
-                if (isDelivered && userId != null) ...[
-                  const SizedBox(height: 8),
-                  if (isReviewed && existingReview != null)
-                    // Show existing rating
-                    Row(
+                // Show existing rating for delivered orders
+                if (isDelivered && userId != null && isReviewed && existingReview != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Row(
                       children: [
                         StarRating(
                           rating: existingReview.rating.toDouble(),
@@ -303,38 +304,75 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                           child: Text(
                             'Edit',
                             style: TextStyle(
-                              color: Theme.of(context).primaryColor,
+                              color: isDark ? yellowColor : Theme.of(context).primaryColor,
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
                       ],
-                    )
-                  else
-                    // Show review button
-                    OutlinedButton.icon(
-                      onPressed: () => _showReviewDialog(
-                        productId: item.productId,
-                        productName: item.productName,
-                        userId: userId,
-                      ),
-                      icon: const Icon(Icons.rate_review_outlined, size: 16),
-                      label: const Text('Beri Ulasan'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 4,
-                        ),
-                        textStyle: const TextStyle(fontSize: 12),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
                     ),
-                ],
+                  ),
               ],
             ),
           ),
+          // Review button on the right side
+          if (isDelivered && userId != null && !isReviewed)
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isDark 
+                      ? [const Color(0xFFFFC20E), const Color(0xFFFFD54F)]
+                      : [const Color(0xFF4CAF50), const Color(0xFF81C784)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: (isDark ? const Color(0xFFFFC20E) : const Color(0xFF4CAF50)).withOpacity(0.3),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _showReviewDialog(
+                    productId: item.productId,
+                    productName: item.productName,
+                    userId: userId,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.star_rounded,
+                          size: 14,
+                          color: isDark ? Colors.black87 : Colors.white,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Beri Ulasan',
+                          style: TextStyle(
+                            color: isDark ? Colors.black87 : Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -349,6 +387,9 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) {
+        final isDark = Theme.of(dialogContext).brightness == Brightness.dark;
+        const yellowColor = Color(0xFFFFC20E);
+        
         return AlertDialog(
           title: Text(
             existingReview != null ? 'Edit Ulasan' : 'Beri Ulasan',
@@ -365,12 +406,16 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.grey[100],
+                      color: Colors.transparent,
+                      border: Border.all(
+                        color: isDark ? yellowColor : Colors.grey[300]!,
+                        width: 1.5,
+                      ),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.shopping_bag_outlined, color: Colors.grey[600]),
+                        Icon(Icons.shopping_bag_outlined, color: isDark ? yellowColor : Colors.grey[600]),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
