@@ -1,12 +1,16 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../models/order_model.dart';
 import '../../widgets/skeleton_loading.dart';
+
+// Conditional imports for platform-specific file saving
+import 'export_helper_stub.dart'
+    if (dart.library.html) 'export_helper_web.dart'
+    if (dart.library.io) 'export_helper_io.dart' as export_helper;
 
 class OrderManagementScreen extends StatefulWidget {
   const OrderManagementScreen({super.key});
@@ -260,54 +264,40 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
       final now = DateTime.now();
       final fileName = 'pesanan_${DateFormat('yyyyMMdd_HHmmss').format(now)}.csv';
       
-      // Get downloads directory based on platform
-      Directory? directory;
-      if (Platform.isAndroid) {
-        directory = Directory('/storage/emulated/0/Download');
-        if (!await directory.exists()) {
-          directory = await getExternalStorageDirectory();
-        }
-      } else if (Platform.isIOS) {
-        directory = await getApplicationDocumentsDirectory();
-      } else {
-        // Windows/macOS/Linux - use documents directory
-        directory = await getApplicationDocumentsDirectory();
-      }
-      
-      if (directory == null) {
-        throw Exception('Tidak dapat mengakses direktori penyimpanan');
-      }
-      
-      final file = File('${directory.path}/$fileName');
-      await file.writeAsString(csvContent);
+      // Use platform-specific export helper
+      final result = await export_helper.saveFile(fileName, csvContent);
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.white),
-                    SizedBox(width: 8),
-                    Text('File berhasil disimpan!'),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  file.path,
-                  style: const TextStyle(fontSize: 11, color: Colors.white70),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+        if (result['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.white),
+                      SizedBox(width: 8),
+                      Text('File berhasil disimpan!'),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    result['path'] ?? (kIsWeb ? 'File di-download ke folder Downloads' : ''),
+                    style: const TextStyle(fontSize: 11, color: Colors.white70),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green[600],
+              duration: const Duration(seconds: 4),
             ),
-            backgroundColor: Colors.green[600],
-            duration: const Duration(seconds: 4),
-          ),
-        );
+          );
+        } else {
+          throw Exception(result['error'] ?? 'Unknown error');
+        }
       }
     } catch (e) {
       if (mounted) {
