@@ -372,14 +372,31 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
               ..._statusOptions.map((status) {
                 return _buildStatusChip(status, orderProvider);
               }).toList(),
-              const SizedBox(width: 8),
-              // Quick date filters
+            ],
+          ),
+        ),
+        
+        // Garis Pemisah
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Divider(
+            height: 1,
+            thickness: 1,
+          ),
+        ),
+        
+        // Date Filters
+        SizedBox(
+          height: 50,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: [
               _buildQuickFilterChip('Hari ini', () {
                 final now = DateTime.now();
                 final today = DateTime(now.year, now.month, now.day);
                 _applyDateFilterPreservingStatus(orderProvider, today, today);
               }, orderProvider),
-              const SizedBox(width: 8),
               _buildQuickFilterChip('Minggu ini', () {
                 final now = DateTime.now();
                 final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
@@ -387,14 +404,12 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                 final end = DateTime(now.year, now.month, now.day);
                 _applyDateFilterPreservingStatus(orderProvider, start, end);
               }, orderProvider),
-              const SizedBox(width: 8),
               _buildQuickFilterChip('Bulan ini', () {
                 final now = DateTime.now();
                 final start = DateTime(now.year, now.month, 1);
                 final end = DateTime(now.year, now.month, now.day);
                 _applyDateFilterPreservingStatus(orderProvider, start, end);
               }, orderProvider),
-              const SizedBox(width: 8),
               // Date range filter
               _buildDateRangeChip(orderProvider),
               const SizedBox(width: 8),
@@ -414,10 +429,21 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(
-        label: Text(_getStatusLabel(status)),
+        label: Text(
+          _getStatusLabel(status),
+          style: TextStyle(
+            color: isSelected && Theme.of(context).brightness == Brightness.dark
+                ? Colors.black // Text hitam pada background kuning (dark mode)
+                : null, // Default color untuk light mode
+          ),
+        ),
         selected: isSelected,
-        selectedColor: Theme.of(context).primaryColor,
-        checkmarkColor: Colors.white,
+        selectedColor: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFFFFC20E) // Kuning pada dark mode
+            : Theme.of(context).primaryColor,
+        checkmarkColor: Theme.of(context).brightness == Brightness.dark
+            ? Colors.black // Checkmark hitam pada background kuning
+            : Colors.white,
         onSelected: (selected) {
           if (status == 'Semua Status') {
             orderProvider.filterByStatus(null); // Clear all status filters
@@ -461,7 +487,9 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         ],
       ),
       selected: hasDateFilter,
-      selectedColor: Theme.of(context).primaryColor,
+      selectedColor: Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFFFFC20E) // Kuning pada dark mode
+          : Theme.of(context).primaryColor,
       onSelected: (selected) {
         if (selected) {
           _showDateFilterOptions(orderProvider);
@@ -497,10 +525,24 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
           ),
         );
       } : null,
-      backgroundColor: hasActiveFilters ? Colors.red[50] : Colors.grey[100],
-      side: BorderSide(color: hasActiveFilters ? Colors.red[200]! : Colors.grey[300]!),
+      backgroundColor: hasActiveFilters 
+          ? (Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFFFFC20E).withOpacity(0.2) // Kuning transparan pada dark mode
+              : Colors.red[50])
+          : Colors.grey[100],
+      side: BorderSide(
+        color: hasActiveFilters 
+            ? (Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFFFFC20E) // Border kuning pada dark mode
+                : Colors.red[200]!)
+            : Colors.grey[300]!
+      ),
       labelStyle: TextStyle(
-        color: hasActiveFilters ? Colors.red[700] : Colors.grey[500],
+        color: hasActiveFilters 
+            ? (Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFFFFC20E) // Teks kuning pada dark mode
+                : Colors.red[700])
+            : Colors.grey[500],
       ),
     );
   }
@@ -508,19 +550,25 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
   Widget _buildQuickFilterChip(String label, VoidCallback onPressed, OrderProvider orderProvider) {
     bool isActive = _isQuickFilterActive(label, orderProvider);
     
-    return ActionChip(
-      label: Text(
-        label,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-          color: isActive ? Colors.white : null,
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        label: Text(
+          label,
+          style: TextStyle(
+            color: isActive && Theme.of(context).brightness == Brightness.dark
+                ? Colors.black // Teks hitam pada background kuning dark mode
+                : null,
+          ),
         ),
-      ),
-      onPressed: onPressed,
-      backgroundColor: isActive ? Theme.of(context).primaryColor : Colors.grey[100],
-      side: BorderSide(
-        color: isActive ? Theme.of(context).primaryColor : Colors.grey[300]!,
+        selected: isActive,
+        selectedColor: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFFFFC20E) // Kuning pada dark mode
+            : Theme.of(context).primaryColor,
+        checkmarkColor: Theme.of(context).brightness == Brightness.dark
+            ? Colors.black // Checkmark hitam pada background kuning
+            : Colors.white,
+        onSelected: (selected) => onPressed(),
       ),
     );
   }
@@ -834,7 +882,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                 backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                 surfaceTintColor: Colors.transparent,
                 elevation: 0,
-                toolbarHeight: 320,
+                toolbarHeight: 400, // Ditambah untuk menampung filtering yang terpisah
                 flexibleSpace: FlexibleSpaceBar(
                   background: SafeArea(
                     bottom: false,
@@ -878,7 +926,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                 backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                 surfaceTintColor: Colors.transparent,
                 elevation: 0,
-                toolbarHeight: 320,
+                toolbarHeight: 400, // Ditambah untuk menampung filtering yang terpisah
                 flexibleSpace: FlexibleSpaceBar(
                   background: SafeArea(
                     bottom: false,
@@ -940,7 +988,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                 backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                 surfaceTintColor: Colors.transparent,
                 elevation: 0,
-                toolbarHeight: 320,
+                toolbarHeight: 400, // Ditambah untuk menampung filtering yang terpisah
                 flexibleSpace: FlexibleSpaceBar(
                   background: SafeArea(
                     bottom: false,

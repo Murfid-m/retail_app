@@ -8,7 +8,7 @@ import '../../widgets/skeleton_loading.dart';
 
 class StatisticsScreen extends StatefulWidget {
   final VoidCallback? onNavigateToOrders;
-  
+
   const StatisticsScreen({super.key, this.onNavigateToOrders});
 
   @override
@@ -65,7 +65,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         break;
       case 'Minggu Ini':
         final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-        startDate = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+        startDate = DateTime(
+          startOfWeek.year,
+          startOfWeek.month,
+          startOfWeek.day,
+        );
         endDate = DateTime(now.year, now.month, now.day);
         break;
       case 'Bulan Ini':
@@ -95,183 +99,250 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       widget.onNavigateToOrders!();
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: Consumer<OrderProvider>(
           builder: (context, orderProvider, child) {
-          if (orderProvider.isLoading) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // KPI Cards skeleton
-                  Row(
-                    children: [
-                      Expanded(child: StatCardSkeleton()),
-                      const SizedBox(width: 8),
-                      Expanded(child: StatCardSkeleton()),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(child: StatCardSkeleton()),
-                      const SizedBox(width: 8),
-                      Expanded(child: StatCardSkeleton()),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  // Chart section skeleton
-                  SkeletonLoading(width: double.infinity, height: 300, borderRadius: BorderRadius.circular(12)),
-                  const SizedBox(height: 24),
-                  SkeletonLoading(width: double.infinity, height: 300, borderRadius: BorderRadius.circular(12)),
-                ],
+            if (orderProvider.isLoading) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header skeleton
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFC20E),
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      child: const Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Statistik',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Date filter skeleton
+                    SkeletonLoading(
+                      width: double.infinity,
+                      height: 200,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    const SizedBox(height: 16),
+                    // KPI Cards skeleton
+                    Row(
+                      children: [
+                        Expanded(child: StatCardSkeleton()),
+                        const SizedBox(width: 8),
+                        Expanded(child: StatCardSkeleton()),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(child: StatCardSkeleton()),
+                        const SizedBox(width: 8),
+                        Expanded(child: StatCardSkeleton()),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    // Chart section skeleton
+                    SkeletonLoading(
+                      width: double.infinity,
+                      height: 300,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            final stats = orderProvider.statistics;
+            if (stats == null) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.info_outline,
+                      size: 64,
+                      color: Colors.grey,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Gagal memuat statistik'),
+                    const SizedBox(height: 8),
+                    ElevatedButton(
+                      onPressed: () => orderProvider.loadStatistics(),
+                      child: const Text('Coba Lagi'),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: _showSeedDataDialog,
+                      icon: const Icon(Icons.dataset),
+                      label: const Text('Seed Data Testing'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFFFC20E),
+                        side: const BorderSide(color: Color(0xFFFFC20E)),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            // Check if all stats are 0 - with safe access
+            final dailySales = (stats['daily'] as Map?)?['sales'] ?? 0;
+            final weeklySales = (stats['weekly'] as Map?)?['sales'] ?? 0;
+            final monthlySales = (stats['monthly'] as Map?)?['sales'] ?? 0;
+            final totalSales = (stats['total'] as Map?)?['sales'] ?? 0;
+
+            final isAllZero =
+                dailySales == 0 &&
+                weeklySales == 0 &&
+                monthlySales == 0 &&
+                totalSales == 0;
+
+            print(
+              '🔍 Stats check: daily=$dailySales, weekly=$weeklySales, monthly=$monthlySales, total=$totalSales, isAllZero=$isAllZero',
+            );
+
+            return RefreshIndicator(
+              onRefresh: () => orderProvider.loadStatistics(),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Custom AppBar with margin
+                    Container(
+                      margin: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFC20E),
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      child: Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Statistik',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.dataset,
+                              color: Colors.black,
+                            ),
+                            tooltip: 'Seed Data Testing',
+                            onPressed: _showSeedDataDialog,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Content with horizontal padding
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Seed data button if stats are 0
+                          if (isAllZero)
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16),
+                              margin: const EdgeInsets.only(bottom: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.orange[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.orange),
+                              ),
+                              child: Column(
+                                children: [
+                                  const Icon(
+                                    Icons.info_outline,
+                                    color: Colors.orange,
+                                    size: 32,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    'Belum ada data statistik',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  const Text(
+                                    'Gunakan data testing untuk melihat contoh statistik',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  ElevatedButton.icon(
+                                    onPressed: _showSeedDataDialog,
+                                    icon: const Icon(Icons.dataset),
+                                    label: const Text('Seed Data Testing'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFFFC20E),
+                                      foregroundColor: Colors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                          // Date range filter
+                          _buildDateRangeFilter(orderProvider),
+                          const SizedBox(height: 16),
+
+                          // Statistics cards
+                          _buildStatisticsCards(stats),
+                          const SizedBox(height: 24),
+
+                          // Sales chart
+                          _buildSalesChart(
+                            orderProvider.chartData,
+                            orderProvider.statistics,
+                          ),
+                          const SizedBox(
+                            height: 32,
+                          ), // Extra padding untuk menghindari overflow
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
-          }
-
-        final stats = orderProvider.statistics;
-        if (stats == null) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.info_outline, size: 64, color: Colors.grey),
-                const SizedBox(height: 16),
-                const Text('Gagal memuat statistik'),
-                const SizedBox(height: 8),
-                ElevatedButton(
-                  onPressed: () => orderProvider.loadStatistics(),
-                  child: const Text('Coba Lagi'),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: _showSeedDataDialog,
-                  icon: const Icon(Icons.dataset),
-                  label: const Text('Seed Data Testing'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFFFFC20E),
-                    side: const BorderSide(color: Color(0xFFFFC20E)),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        // Check if all stats are 0 - with safe access
-        final dailySales = (stats['daily'] as Map?)?['sales'] ?? 0;
-        final weeklySales = (stats['weekly'] as Map?)?['sales'] ?? 0;
-        final monthlySales = (stats['monthly'] as Map?)?['sales'] ?? 0;
-        final totalSales = (stats['total'] as Map?)?['sales'] ?? 0;
-        
-        final isAllZero = dailySales == 0 && weeklySales == 0 && monthlySales == 0 && totalSales == 0;
-        
-        print('🔍 Stats check: daily=$dailySales, weekly=$weeklySales, monthly=$monthlySales, total=$totalSales, isAllZero=$isAllZero');
-
-        return RefreshIndicator(
-          onRefresh: () => orderProvider.loadStatistics(),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Custom AppBar with margin
-                Container(
-                  margin: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFC20E),
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  child: Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Statistik',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.dataset, color: Colors.black),
-                        tooltip: 'Seed Data Testing',
-                        onPressed: _showSeedDataDialog,
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // Content with horizontal padding
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Seed data button if stats are 0
-                      if (isAllZero)
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          margin: const EdgeInsets.only(bottom: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.orange[50],
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.orange),
-                          ),
-                          child: Column(
-                            children: [
-                              const Icon(Icons.info_outline, color: Colors.orange, size: 32),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Belum ada data statistik',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 4),
-                              const Text(
-                                'Gunakan data testing untuk melihat contoh statistik',
-                                style: TextStyle(fontSize: 12, color: Colors.grey),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 12),
-                              ElevatedButton.icon(
-                                onPressed: _showSeedDataDialog,
-                                icon: const Icon(Icons.dataset),
-                                label: const Text('Seed Data Testing'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFFFC20E),
-                                  foregroundColor: Colors.black,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      
-                      // Date range filter
-                      _buildDateRangeFilter(orderProvider),
-                      const SizedBox(height: 16),
-                      
-                      // Statistics cards
-                      _buildStatisticsCards(stats),
-                      const SizedBox(height: 24),
-
-                      // Sales chart
-                      _buildSalesChart(orderProvider.chartData, orderProvider.statistics),
-                      const SizedBox(height: 32), // Extra padding untuk menghindari overflow
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-        },
+          },
         ),
       ),
     );
@@ -359,21 +430,30 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     child: Icon(icon, color: color, size: 20),
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    title,
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               Text(
                 value,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
               const SizedBox(height: 4),
               Text(
                 subtitle,
                 style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 8),
               Row(
@@ -393,7 +473,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     );
   }
 
-  Widget _buildSalesChart(List<Map<String, dynamic>> chartData, Map<String, dynamic>? stats) {
+  Widget _buildSalesChart(
+    List<Map<String, dynamic>> chartData,
+    Map<String, dynamic>? stats,
+  ) {
     if (chartData.isEmpty) {
       return Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -412,16 +495,19 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     final groupingType = stats?['chart_grouping'] ?? 'daily';
     final dateRange = stats?['date_range'];
     String chartTitle;
-    
+
     if (dateRange != null) {
       final start = DateTime.parse(dateRange['start']);
       final end = DateTime.parse(dateRange['end']);
       if (groupingType == 'monthly') {
-        chartTitle = 'Penjualan Bulanan (${DateFormat('MMM yyyy').format(start)} - ${DateFormat('MMM yyyy').format(end)})';
+        chartTitle =
+            'Penjualan Bulanan (${DateFormat('MMM yyyy').format(start)} - ${DateFormat('MMM yyyy').format(end)})';
       } else if (groupingType == 'weekly') {
-        chartTitle = 'Penjualan Mingguan (${DateFormat('dd MMM').format(start)} - ${DateFormat('dd MMM yyyy').format(end)})';
+        chartTitle =
+            'Penjualan Mingguan (${DateFormat('dd MMM').format(start)} - ${DateFormat('dd MMM yyyy').format(end)})';
       } else {
-        chartTitle = 'Penjualan Harian (${DateFormat('dd MMM').format(start)} - ${DateFormat('dd MMM yyyy').format(end)})';
+        chartTitle =
+            'Penjualan Harian (${DateFormat('dd MMM').format(start)} - ${DateFormat('dd MMM yyyy').format(end)})';
       }
     } else {
       chartTitle = 'Penjualan 7 Hari Terakhir';
@@ -439,19 +525,30 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                 Expanded(
                   child: Text(
                     chartTitle,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
                   ),
                 ),
                 if (groupingType != 'daily')
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFC20E).withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       groupingType == 'monthly' ? 'Per Bulan' : 'Per Minggu',
-                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
               ],
@@ -467,7 +564,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     enabled: true,
                     touchTooltipData: BarTouchTooltipData(
                       getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                        final label = chartData[group.x.toInt()]['date'] as String;
+                        final label =
+                            chartData[group.x.toInt()]['date'] as String;
                         return BarTooltipItem(
                           '$label\nRp ${_formatPrice(rod.toY)}',
                           const TextStyle(
@@ -495,13 +593,27 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                           if (index >= 0 && index < chartData.length) {
                             final dateStr = chartData[index]['date'] as String;
                             String label;
-                            
+
                             if (groupingType == 'monthly') {
                               // Format: 2018-01 -> Jan'18
                               final parts = dateStr.split('-');
                               final month = int.parse(parts[1]);
                               final year = parts[0].substring(2);
-                              final monthNames = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
+                              final monthNames = [
+                                '',
+                                'Jan',
+                                'Feb',
+                                'Mar',
+                                'Apr',
+                                'Mei',
+                                'Jun',
+                                'Jul',
+                                'Agt',
+                                'Sep',
+                                'Okt',
+                                'Nov',
+                                'Des',
+                              ];
                               label = "${monthNames[month]}'$year";
                             } else if (groupingType == 'weekly') {
                               // Format: 2018-W01 -> W01
@@ -511,7 +623,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                               final date = DateTime.parse(dateStr);
                               label = DateFormat('dd/MM').format(date);
                             }
-                            
+
                             return Padding(
                               padding: const EdgeInsets.only(top: 8),
                               child: Text(
@@ -557,7 +669,9 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                         BarChartRodData(
                           toY: entry.value['sales'] as double,
                           color: const Color(0xFFFFC20E),
-                          width: chartData.length > 20 ? 8 : (chartData.length > 10 ? 12 : 20),
+                          width: chartData.length > 20
+                              ? 8
+                              : (chartData.length > 10 ? 12 : 20),
                           borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(4),
                           ),
@@ -584,8 +698,9 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   }
 
   Widget _buildDateRangeFilter(OrderProvider provider) {
-    final hasDateRange = provider.statsStartDate != null && provider.statsEndDate != null;
-    
+    final hasDateRange =
+        provider.statsStartDate != null && provider.statsEndDate != null;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -598,10 +713,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                 const SizedBox(width: 8),
                 const Text(
                   'Filter Tanggal',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
                 if (hasDateRange)
@@ -609,14 +721,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     onPressed: () => provider.clearStatsDateRange(),
                     icon: const Icon(Icons.clear, size: 18),
                     label: const Text('Reset'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.red,
-                    ),
+                    style: TextButton.styleFrom(foregroundColor: Colors.red),
                   ),
               ],
             ),
             const SizedBox(height: 12),
-            
+
             // Quick select buttons
             Wrap(
               spacing: 8,
@@ -651,24 +761,39 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   provider.setStatsDateRange(start, end);
                 }),
                 _buildQuickSelectChip('2018', () {
-                  provider.setStatsDateRange(DateTime(2018, 1, 1), DateTime(2018, 12, 31));
+                  provider.setStatsDateRange(
+                    DateTime(2018, 1, 1),
+                    DateTime(2018, 12, 31),
+                  );
                 }),
                 _buildQuickSelectChip('2017', () {
-                  provider.setStatsDateRange(DateTime(2017, 1, 1), DateTime(2017, 12, 31));
+                  provider.setStatsDateRange(
+                    DateTime(2017, 1, 1),
+                    DateTime(2017, 12, 31),
+                  );
                 }),
                 _buildQuickSelectChip('2016', () {
-                  provider.setStatsDateRange(DateTime(2016, 1, 1), DateTime(2016, 12, 31));
+                  provider.setStatsDateRange(
+                    DateTime(2016, 1, 1),
+                    DateTime(2016, 12, 31),
+                  );
                 }),
                 _buildQuickSelectChip('2015', () {
-                  provider.setStatsDateRange(DateTime(2015, 1, 1), DateTime(2015, 12, 31));
+                  provider.setStatsDateRange(
+                    DateTime(2015, 1, 1),
+                    DateTime(2015, 12, 31),
+                  );
                 }),
               ],
             ),
             const SizedBox(height: 12),
-            
+
             if (hasDateRange)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFC20E).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -676,11 +801,18 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.calendar_today, size: 16, color: Color(0xFFFFC20E)),
+                    const Icon(
+                      Icons.calendar_today,
+                      size: 16,
+                      color: Color(0xFFFFC20E),
+                    ),
                     const SizedBox(width: 8),
-                    Text(
-                      '${DateFormat('dd MMM yyyy').format(provider.statsStartDate!)} - ${DateFormat('dd MMM yyyy').format(provider.statsEndDate!)}',
-                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    Expanded(
+                      child: Text(
+                        '${DateFormat('dd MMM yyyy').format(provider.statsStartDate!)} - ${DateFormat('dd MMM yyyy').format(provider.statsEndDate!)}',
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
@@ -721,21 +853,22 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: Colors.grey[400]!),
         ),
-        child: Text(
-          label,
-          style: const TextStyle(fontSize: 12),
-        ),
+        child: Text(label, style: const TextStyle(fontSize: 12)),
       ),
     );
   }
 
-  Future<void> _showDateRangePicker(BuildContext context, OrderProvider provider) async {
+  Future<void> _showDateRangePicker(
+    BuildContext context,
+    OrderProvider provider,
+  ) async {
     final DateTimeRange? picked = await showDateRangePicker(
       context: context,
       firstDate: DateTime(2015, 1, 1), // Support data dari 2015
       lastDate: DateTime.now(),
       currentDate: DateTime.now(), // Untuk navigasi hari ini
-      initialDateRange: provider.statsStartDate != null && provider.statsEndDate != null
+      initialDateRange:
+          provider.statsStartDate != null && provider.statsEndDate != null
           ? DateTimeRange(
               start: provider.statsStartDate!,
               end: provider.statsEndDate!,
