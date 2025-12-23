@@ -56,11 +56,14 @@ class _SeedDataDialogState extends State<SeedDataDialog> {
 
     try {
       final statisticsService = StatisticsService();
-      final success = await statisticsService.deleteSeededData();
+      final result = await statisticsService.deleteSeededData();
+
+      final success = result['success'] == true;
+      final message = result['message'] ?? (success ? 'Data seed dihapus' : 'Gagal menghapus seed');
 
       if (success) {
         setState(() {
-          _status = '✅ Data seed berhasil dihapus!';
+          _status = '✅ ${message}';
           _isDeleting = false;
         });
 
@@ -69,10 +72,19 @@ class _SeedDataDialogState extends State<SeedDataDialog> {
           Navigator.pop(context, true);
         }
       } else {
+        // Show diagnostic details when deletion failed
+        final errors = (result['errors'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
+        final candidates = result['candidates'] ?? 0;
+        final deleted = result['deleted'] ?? 0;
+        final sample = (result['sample_names'] as List<dynamic>?)?.take(5).toList() ?? [];
+
         setState(() {
-          _status = '❌ Gagal menghapus data';
+          _status = '❌ Gagal menghapus data. Ditemukan: $candidates, Terhapus: $deleted. ${message}';
           _isDeleting = false;
         });
+
+        // Log full details for debugging
+        print('Seed delete diagnostics: candidates=$candidates, deleted=$deleted, sample=$sample, errors=$errors');
       }
     } catch (e) {
       setState(() {
@@ -111,7 +123,7 @@ class _SeedDataDialogState extends State<SeedDataDialog> {
       // Gunakan daily_sales untuk data yang lebih akurat
       final dailySales = jsonData['daily_sales'] as List;
       
-      _total = dailySales.length + 25; // all daily data + recent data
+      _total = dailySales.length; // only historical data from JSON
 
       // Process daily sales data dari JSON (2015-2018)
       setState(() => _status = 'Membuat data historis dari daily_sales...');
@@ -148,52 +160,14 @@ class _SeedDataDialogState extends State<SeedDataDialog> {
             'user_email': 'seed_${date.replaceAll('-', '')}_${i + 1}@example.com',
             'shipping_address': 'Jakarta, Indonesia',
             'total_amount': orderValue,
-            'status': 'completed',
+            'status': 'delivered',
             'created_at': '${date}T${hour.toString().padLeft(2, '0')}:00:00Z',
           });
         }
       }
 
-      // Add current month data
-      setState(() => _status = 'Menambah data bulan ini...');
-      final now = DateTime.now();
-      for (int i = 0; i < 20; i++) {
-        final daysAgo = i;
-        final date = now.subtract(Duration(days: daysAgo));
-        final amount = 50000.0 + (i * 10000);
-
-        await supabase.from('orders').insert({
-          'user_id': userId,
-          'user_name': '[SEED] Customer Bulan Ini ${i + 1}',
-          'user_phone': '0812345678${i % 100}'.padRight(12, '0'),
-          'user_email': 'seed_recent${i + 1}@example.com',
-          'shipping_address': 'Jakarta, Indonesia',
-          'total_amount': amount,
-          'status': 'completed',
-          'created_at': date.toIso8601String(),
-        });
-
-        setState(() => _progress++);
-      }
-
-      // Add today's data
-      setState(() => _status = 'Menambah data hari ini...');
-      for (int i = 0; i < 5; i++) {
-        final amount = 75000.0 + (i * 25000);
-
-        await supabase.from('orders').insert({
-          'user_id': userId,
-          'user_name': '[SEED] Customer Hari Ini ${i + 1}',
-          'user_phone': '0812345678${i % 100}'.padRight(12, '0'),
-          'user_email': 'seed_today${i + 1}@example.com',
-          'shipping_address': 'Jakarta, Indonesia',
-          'total_amount': amount,
-          'status': 'completed',
-          'created_at': DateTime.now().subtract(Duration(hours: i)).toIso8601String(),
-        });
-
-        setState(() => _progress++);
-      }
+      // Note: Data only seeded from JSON file (historical data 2015-2018)
+      // No current month or today's data is added to keep seed data consistent with JSON
 
       setState(() {
         _status = '✅ Seeding selesai!';

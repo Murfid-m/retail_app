@@ -140,42 +140,114 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
           }
 
           if (productProvider.products.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.inventory_2_outlined,
-                    size: 100,
-                    color: Colors.grey[300],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    productProvider.searchQuery.isNotEmpty ||
-                            productProvider.selectedCategory != null
-                        ? 'Tidak ada produk ditemukan'
-                        : 'Belum ada produk',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey[600],
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  if (productProvider.searchQuery.isEmpty &&
-                      productProvider.selectedCategory == null)
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const AddEditProductScreen(),
+            return RefreshIndicator(
+              onRefresh: () => productProvider.loadProducts(),
+              child: CustomScrollView(
+                slivers: [
+                  // Search bar dan Category filter tetap terlihat
+                  SliverAppBar(
+                    floating: true,
+                    snap: true,
+                    automaticallyImplyLeading: false,
+                    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                    elevation: 0,
+                    toolbarHeight: 148,
+                    flexibleSpace: SafeArea(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Search bar
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                            child: SearchBar(
+                              controller: _searchController,
+                              hintText: 'Cari produk...',
+                              leading: const Icon(Icons.search),
+                              trailing: [
+                                if (_searchController.text.isNotEmpty)
+                                  IconButton(
+                                    icon: const Icon(Icons.clear),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      productProvider.searchProducts('');
+                                    },
+                                  ),
+                              ],
+                              onChanged: (value) {
+                                productProvider.searchProducts(value);
+                              },
+                            ),
                           ),
-                        );
-                      },
-                      icon: const Icon(Icons.add),
-                      label: const Text('Tambah Produk'),
+                          // Category filter
+                          SizedBox(
+                            height: 50,
+                            child: ListView(
+                              scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              children: _categories.map((category) {
+                                return _buildCategoryChip(category, productProvider);
+                              }).toList(),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                      ),
                     ),
+                  ),
+                  // Pesan kosong
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.inventory_2_outlined,
+                            size: 100,
+                            color: Colors.grey[300],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            productProvider.searchQuery.isNotEmpty ||
+                                    productProvider.selectedCategory != null
+                                ? 'Tidak ada produk ditemukan'
+                                : 'Belum ada produk',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey[600],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          if (productProvider.searchQuery.isNotEmpty ||
+                              productProvider.selectedCategory != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              'Coba kata kunci atau kategori lain',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 16),
+                          if (productProvider.searchQuery.isEmpty &&
+                              productProvider.selectedCategory == null)
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const AddEditProductScreen(),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.add),
+                              label: const Text('Tambah Produk'),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             );

@@ -11,6 +11,8 @@ import '../../models/user_model.dart';
 import '../auth/login_screen.dart';
 import 'help_support_screen.dart';
 import 'change_password_screen.dart';
+import 'wishlist_screen.dart';
+import 'cart_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -322,7 +324,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                   child: Icon(
                                     Icons.camera_alt,
                                     size: 16,
-                                    color: Theme.of(context).primaryColor,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? const Color(0xFFFFC20E)
+                                        : Theme.of(context).primaryColor,
                                   ),
                                 ),
                               ),
@@ -368,15 +372,31 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                               count: wishlistProvider.wishlistCount,
                               label: 'Wishlist',
                               color: Colors.red,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const WishlistScreen(),
+                                  ),
+                                );
+                              },
                             ),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
                             child: _buildStatCard(
-                              icon: Icons.shopping_bag,
-                              count: 0, // TODO: Connect to orders
-                              label: 'Pesanan',
+                              icon: Icons.shopping_cart,
+                              count: 0,
+                              label: 'Keranjang',
                               color: Colors.blue,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const CartScreen(),
+                                  ),
+                                );
+                              },
                             ),
                           ),
                         ],
@@ -566,6 +586,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     required int count,
     required String label,
     required Color color,
+    VoidCallback? onTap,
   }) {
     return Card(
       elevation: 0,
@@ -573,9 +594,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: Colors.grey.withOpacity(0.2)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-        child: Column(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          child: Column(
           children: [
             Container(
               padding: const EdgeInsets.all(12),
@@ -583,7 +607,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 color: color.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: color, size: 24),
+              child: Icon(
+                icon,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFFFFC20E)
+                    : color,
+                size: 24,
+              ),
             ),
             const SizedBox(height: 12),
             Text(
@@ -603,6 +633,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               ),
             ),
           ],
+          ),
         ),
       ),
     );
@@ -642,12 +673,16 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFFFFC20E).withOpacity(0.1)
+                      : Theme.of(context).primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
                   icon,
-                  color: Theme.of(context).primaryColor,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFFFFC20E)
+                      : Theme.of(context).primaryColor,
                   size: 20,
                 ),
               ),
@@ -709,10 +744,18 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Theme.of(context).primaryColor.withOpacity(0.1),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFFFFC20E).withOpacity(0.1)
+                : Theme.of(context).primaryColor.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: Theme.of(context).primaryColor, size: 20),
+          child: Icon(
+            icon,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFFFFC20E)
+                : Theme.of(context).primaryColor,
+            size: 20,
+          ),
         ),
         title: Text(title),
         subtitle: subtitle != null ? Text(subtitle) : null,
@@ -737,7 +780,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               child: Icon(
                 Icons.shopping_bag,
                 size: 64,
-                color: Theme.of(context).primaryColor,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFFFFC20E)
+                    : Theme.of(context).primaryColor,
               ),
             ),
             const SizedBox(height: 16),
