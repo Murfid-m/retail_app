@@ -392,14 +392,6 @@ class StatisticsService {
   Future<Map<String, dynamic>> deleteSeededData() async {
     try {
       print('🗑️ Deleting seeded data...');
-<<<<<<< HEAD
-
-      // Delete orders that have [SEED] prefix in user_name (unique identifier for seeded data)
-      await _supabase.from('orders').delete().like('user_name', '[SEED]%');
-
-      print('✅ Seeded data deleted successfully');
-      return true;
-=======
       // Find seeded orders by multiple heuristics so we catch older seed formats too:
       // - user_name starting with '[SEED]'
       // - user_name containing '[SEED]'
@@ -497,7 +489,6 @@ class StatisticsService {
         'errors': errors,
         'sample_names': sampleNames.take(10).toList(),
       };
->>>>>>> 28556a459910f0a136080b482f61bad46e47d0dc
     } catch (e) {
       print('❌ Error deleting seeded data: $e');
       return {'success': false, 'message': 'Error: $e', 'candidates': 0, 'errors': [e.toString()]};

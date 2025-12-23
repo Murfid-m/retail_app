@@ -33,6 +33,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       const ProductManagementScreen(),
       const OrderManagementScreen(),
       StatisticsScreen(onNavigateToOrders: _switchToOrderTab),
+      const LowStockScreen(),
     ];
 
     return Scaffold(
