@@ -98,39 +98,40 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Consumer<OrderProvider>(
-        builder: (context, orderProvider, child) {
-        if (orderProvider.isLoading) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // KPI Cards skeleton
-                Row(
-                  children: [
-                    Expanded(child: StatCardSkeleton()),
-                    const SizedBox(width: 8),
-                    Expanded(child: StatCardSkeleton()),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(child: StatCardSkeleton()),
-                    const SizedBox(width: 8),
-                    Expanded(child: StatCardSkeleton()),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                // Chart section skeleton
-                SkeletonLoading(width: double.infinity, height: 300, borderRadius: BorderRadius.circular(12)),
-                const SizedBox(height: 24),
-                SkeletonLoading(width: double.infinity, height: 300, borderRadius: BorderRadius.circular(12)),
-              ],
-            ),
-          );
-        }
+      body: SafeArea(
+        child: Consumer<OrderProvider>(
+          builder: (context, orderProvider, child) {
+          if (orderProvider.isLoading) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // KPI Cards skeleton
+                  Row(
+                    children: [
+                      Expanded(child: StatCardSkeleton()),
+                      const SizedBox(width: 8),
+                      Expanded(child: StatCardSkeleton()),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(child: StatCardSkeleton()),
+                      const SizedBox(width: 8),
+                      Expanded(child: StatCardSkeleton()),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  // Chart section skeleton
+                  SkeletonLoading(width: double.infinity, height: 300, borderRadius: BorderRadius.circular(12)),
+                  const SizedBox(height: 24),
+                  SkeletonLoading(width: double.infinity, height: 300, borderRadius: BorderRadius.circular(12)),
+                ],
+              ),
+            );
+          }
 
         final stats = orderProvider.statistics;
         if (stats == null) {
@@ -262,7 +263,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
 
                       // Sales chart
                       _buildSalesChart(orderProvider.chartData, orderProvider.statistics),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 32), // Extra padding untuk menghindari overflow
                     ],
                   ),
                 ),
@@ -270,7 +271,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             ),
           ),
         );
-      },
+        },
+        ),
       ),
     );
   }
