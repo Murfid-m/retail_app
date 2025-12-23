@@ -1,9 +1,16 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/order_provider.dart';
 import '../../models/order_model.dart';
 import '../../widgets/skeleton_loading.dart';
+
+// Conditional imports for platform-specific file saving
+import 'export_helper_stub.dart'
+    if (dart.library.html) 'export_helper_web.dart'
+    if (dart.library.io) 'export_helper_io.dart' as export_helper;
 
 class OrderManagementScreen extends StatefulWidget {
   const OrderManagementScreen({super.key});
@@ -85,26 +92,51 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
       return;
     }
     
-    // Create CSV data
-    String csvData = 'Order ID,Customer,Email,Phone,Status,Total Amount,Created Date\\n';
-    for (var order in orders) {
-      csvData += '\"${order.id}\",\"${order.userName}\",\"${order.userEmail}\",\"${order.userPhone}\",\"${_getStatusLabel(order.status)}\",\"${order.totalAmount}\",\"${_formatDate(order.createdAt)}\"\\n';
-    }
-    
-    // Show dialog with options
+    // Show export options dialog
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Export Data Pesanan'),
+        title: const Row(
+          children: [
+            Icon(Icons.file_download, color: Color(0xFFFFC20E)),
+            SizedBox(width: 8),
+            Text('Export Data Pesanan'),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${orders.length} pesanan akan di-export.'),
+            Text(
+              '${orders.length} pesanan akan di-export.',
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
             const SizedBox(height: 16),
             const Text(
-              'Data akan di-copy ke clipboard dalam format CSV.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              'Pilih format export:',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            // CSV to Clipboard Option
+            _buildExportOption(
+              icon: Icons.content_copy,
+              title: 'Copy ke Clipboard',
+              subtitle: 'Salin data CSV ke clipboard untuk paste di Excel/Spreadsheet',
+              onTap: () {
+                Navigator.pop(context);
+                _exportToClipboard(orders);
+              },
+            ),
+            const SizedBox(height: 12),
+            // Download CSV File Option
+            _buildExportOption(
+              icon: Icons.download,
+              title: 'Download File CSV',
+              subtitle: 'Simpan sebagai file .csv yang bisa dibuka di Excel',
+              onTap: () {
+                Navigator.pop(context);
+                _exportToFile(orders);
+              },
             ),
           ],
         ),
@@ -113,19 +145,170 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Batal'),
           ),
-          ElevatedButton(
-            onPressed: () {
-              // Copy to clipboard (simplified version)
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Data pesanan berhasil di-export ke clipboard')),
-              );
-              Navigator.pop(context);
-            },
-            child: const Text('Export'),
-          ),
         ],
       ),
     );
+  }
+  
+  Widget _buildExportOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey[300]!),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFC20E).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: const Color(0xFFFFC20E)),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: Colors.grey[400]),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  String _generateCsvContent(List<OrderModel> orders) {
+    // BOM for Excel UTF-8 compatibility
+    const bom = '\uFEFF';
+    
+    // CSV Header
+    StringBuffer csv = StringBuffer();
+    csv.write(bom);
+    csv.writeln('Order ID,Nama Customer,Email,Telepon,Alamat,Status,Total (Rp),Tanggal Order');
+    
+    // CSV Data
+    for (var order in orders) {
+      final escapedName = order.userName.replaceAll('"', '""');
+      final escapedEmail = order.userEmail.replaceAll('"', '""');
+      final escapedAddress = order.shippingAddress.replaceAll('"', '""');
+      
+      csv.writeln(
+        '"${order.id}",'
+        '"$escapedName",'
+        '"$escapedEmail",'
+        '"${order.userPhone}",'
+        '"$escapedAddress",'
+        '"${_getStatusLabel(order.status)}",'
+        '"${order.totalAmount.toStringAsFixed(0)}",'
+        '"${DateFormat('dd/MM/yyyy HH:mm').format(order.createdAt)}"'
+      );
+    }
+    
+    return csv.toString();
+  }
+  
+  void _exportToClipboard(List<OrderModel> orders) {
+    final csvContent = _generateCsvContent(orders);
+    Clipboard.setData(ClipboardData(text: csvContent));
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '${orders.length} pesanan berhasil di-copy!\nPaste di Excel/Google Sheets.',
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.green[600],
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+  
+  Future<void> _exportToFile(List<OrderModel> orders) async {
+    try {
+      final csvContent = _generateCsvContent(orders);
+      final now = DateTime.now();
+      final fileName = 'pesanan_${DateFormat('yyyyMMdd_HHmmss').format(now)}.csv';
+      
+      // Use platform-specific export helper
+      final result = await export_helper.saveFile(fileName, csvContent);
+      
+      if (mounted) {
+        if (result['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.white),
+                      SizedBox(width: 8),
+                      Text('File berhasil disimpan!'),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    result['path'] ?? (kIsWeb ? 'File di-download ke folder Downloads' : ''),
+                    style: const TextStyle(fontSize: 11, color: Colors.white70),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green[600],
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        } else {
+          throw Exception(result['error'] ?? 'Unknown error');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal menyimpan file: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildSearchAndFilter(OrderProvider orderProvider) {
@@ -159,25 +342,20 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         // Search Bar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: TextField(
+          child: SearchBar(
             controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Cari pesanan...',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                        orderProvider.searchOrders('');
-                      },
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              filled: true,
-            ),
+            hintText: 'Cari pesanan...',
+            leading: const Icon(Icons.search),
+            trailing: [
+              if (_searchController.text.isNotEmpty)
+                IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    orderProvider.searchOrders('');
+                  },
+                ),
+            ],
             onChanged: (value) {
               orderProvider.searchOrders(value);
             },
@@ -645,57 +823,105 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
   Widget build(BuildContext context) {
     return Consumer<OrderProvider>(
       builder: (context, orderProvider, child) {
-        return Column(
-          children: [
-            _buildSearchAndFilter(orderProvider),
-            _buildOrdersSummary(orderProvider),
-            Expanded(
-              child: orderProvider.isLoading
-                  ? ListSkeleton(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: 5,
-                      itemBuilder: (context, index) => const OrderCardSkeleton(),
-                      separator: const SizedBox(height: 12),
-                    )
-                  : orderProvider.orders.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.receipt_long_outlined,
-                                size: 100,
-                                color: Colors.grey[300],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                orderProvider.searchQuery.isNotEmpty ||
-                                        orderProvider.selectedStatus != null ||
-                                        orderProvider.startDate != null ||
-                                        orderProvider.endDate != null
-                                    ? 'Tidak ada pesanan ditemukan'
-                                    : 'Belum ada pesanan',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey[600],
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        )
-                      : RefreshIndicator(
-                          onRefresh: () => orderProvider.loadAllOrders(),
-                          child: ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: orderProvider.orders.length,
-                            itemBuilder: (context, index) {
-                              return _buildOrderCard(orderProvider.orders[index], orderProvider);
-                            },
-                          ),
+        // Show loading state
+        if (orderProvider.isLoading) {
+          return Column(
+            children: [
+              _buildSearchAndFilter(orderProvider),
+              _buildOrdersSummary(orderProvider),
+              Expanded(
+                child: ListSkeleton(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: 5,
+                  itemBuilder: (context, index) => const OrderCardSkeleton(),
+                  separator: const SizedBox(height: 12),
+                ),
+              ),
+            ],
+          );
+        }
+        
+        // Show empty state
+        if (orderProvider.orders.isEmpty) {
+          return Column(
+            children: [
+              _buildSearchAndFilter(orderProvider),
+              _buildOrdersSummary(orderProvider),
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.receipt_long_outlined,
+                        size: 100,
+                        color: Colors.grey[300],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        orderProvider.searchQuery.isNotEmpty ||
+                                orderProvider.selectedStatus != null ||
+                                orderProvider.startDate != null ||
+                                orderProvider.endDate != null
+                            ? 'Tidak ada pesanan ditemukan'
+                            : 'Belum ada pesanan',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.grey[600],
                         ),
-            ),
-          ],
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+        
+        // Show orders with floating search/filter
+        return RefreshIndicator(
+          onRefresh: () => orderProvider.loadAllOrders(),
+          child: CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                floating: true,
+                snap: true,
+                toolbarHeight: 330, // Increased height for all content
+                automaticallyImplyLeading: false,
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                surfaceTintColor: Colors.transparent,
+                flexibleSpace: SafeArea(
+                  bottom: false,
+                  child: SingleChildScrollView(
+                    physics: const NeverScrollableScrollPhysics(),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildSearchAndFilter(orderProvider),
+                        _buildOrdersSummary(orderProvider),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    return Padding(
+                      padding: EdgeInsets.only(
+                        left: 16,
+                        right: 16,
+                        bottom: index == orderProvider.orders.length - 1 ? 16 : 0,
+                      ),
+                      child: _buildOrderCard(orderProvider.orders[index], orderProvider),
+                    );
+                  },
+                  childCount: orderProvider.orders.length,
+                ),
+              ),
+            ],
+          ),
         );
       },
     );

@@ -249,8 +249,8 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: List.generate(6, (index) {
                     return SizedBox(
-                      width: 45,
-                      height: 55,
+                      width: 50,
+                      height: 60,
                       child: KeyboardListener(
                         focusNode: FocusNode(),
                         onKeyEvent: (event) => _onKeyPressed(event, index),
@@ -261,11 +261,16 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen> {
                           keyboardType: TextInputType.number,
                           maxLength: 1,
                           style: const TextStyle(
-                            fontSize: 24,
+                            fontSize: 22,
                             fontWeight: FontWeight.bold,
+                            height: 1.2,
                           ),
                           decoration: InputDecoration(
                             counterText: '',
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 14,
+                              horizontal: 0,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -274,6 +279,13 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen> {
                               borderSide: const BorderSide(
                                 color: Colors.indigo,
                                 width: 2,
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.grey[400]!,
+                                width: 1,
                               ),
                             ),
                           ),
