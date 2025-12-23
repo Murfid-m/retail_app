@@ -60,27 +60,6 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
   void _applyDateFilterPreservingStatus(OrderProvider orderProvider, DateTime startDate, DateTime endDate) {
     // Apply date filter without resetting status filter
     orderProvider.filterByDateRange(startDate, endDate);
-    
-    // Show confirmation with combined filter info
-    String message = 'Filter diterapkan: ${DateFormat('dd MMM yyyy').format(startDate)}';
-    if (startDate != endDate) {
-      message = 'Filter diterapkan: ${DateFormat('dd MMM').format(startDate)} - ${DateFormat('dd MMM yyyy').format(endDate)}';
-    }
-    
-    if (orderProvider.selectedStatuses.isNotEmpty) {
-      final statusLabels = orderProvider.selectedStatuses
-          .map((status) => _getStatusLabel(status))
-          .toList();
-      message += ' + Status: ${statusLabels.join(', ')}';
-    }
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 2),
-        backgroundColor: Colors.green[600],
-      ),
-    );
   }
   
   void _exportOrders(OrderProvider orderProvider) {
@@ -660,9 +639,6 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     }
     
     String summaryText = '${orders.length} pesanan';
-    if (activeFilters.isNotEmpty) {
-      summaryText += ' dengan filter: ${activeFilters.join(', ')}';
-    }
     
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
@@ -681,27 +657,39 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         ),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            summaryText,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: isDark ? const Color(0xFFFFC20E) : Theme.of(context).primaryColor,
-            ),
-          ),
-          const SizedBox(height: 8),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              Expanded(
-                child: _buildSummaryItem(
-                  'Total Revenue', 
-                  'Rp ${_formatPrice(totalRevenue)}', 
-                  Icons.attach_money,
-                  Colors.green,
+              Text(
+                summaryText,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? const Color(0xFFFFC20E) : Theme.of(context).primaryColor,
                 ),
               ),
+              Text(
+                'Rp ${_formatPrice(totalRevenue)}',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.green,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Divider(
+            color: isDark 
+                ? const Color(0xFFFFC20E).withOpacity(0.3) 
+                : Theme.of(context).primaryColor.withOpacity(0.2),
+            thickness: 1,
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
               Expanded(
                 child: _buildSummaryItem(
                   'Menunggu', 
@@ -823,16 +811,6 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     if (picked != null) {
       // Set same date for start and end to filter single day
       orderProvider.filterByDateRange(picked, picked);
-      
-      // Show confirmation
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Filter diterapkan untuk: ${DateFormat('dd MMM yyyy').format(picked)}',
-          ),
-          duration: const Duration(seconds: 2),
-        ),
-      );
     }
   }
 
@@ -862,16 +840,6 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
 
     if (picked != null) {
       orderProvider.filterByDateRange(picked.start, picked.end);
-      
-      // Show confirmation
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Filter diterapkan: ${DateFormat('dd MMM').format(picked.start)} - ${DateFormat('dd MMM yyyy').format(picked.end)}',
-          ),
-          duration: const Duration(seconds: 2),
-        ),
-      );
     }
   }
 
