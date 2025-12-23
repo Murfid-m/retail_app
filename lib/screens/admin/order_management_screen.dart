@@ -1,12 +1,16 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../models/order_model.dart';
 import '../../widgets/skeleton_loading.dart';
+
+// Conditional imports for platform-specific file saving
+import 'export_helper_stub.dart'
+    if (dart.library.html) 'export_helper_web.dart'
+    if (dart.library.io) 'export_helper_io.dart' as export_helper;
 
 class OrderManagementScreen extends StatefulWidget {
   const OrderManagementScreen({super.key});
@@ -17,8 +21,6 @@ class OrderManagementScreen extends StatefulWidget {
 
 class _OrderManagementScreenState extends State<OrderManagementScreen> {
   final TextEditingController _searchController = TextEditingController();
-  String? _activeQuickFilter; // Melacak filter tanggal yang aktif
-  
   final List<String> _statusOptions = [
     'Semua Status',
     'pending',
@@ -262,54 +264,40 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
       final now = DateTime.now();
       final fileName = 'pesanan_${DateFormat('yyyyMMdd_HHmmss').format(now)}.csv';
       
-      // Get downloads directory based on platform
-      Directory? directory;
-      if (Platform.isAndroid) {
-        directory = Directory('/storage/emulated/0/Download');
-        if (!await directory.exists()) {
-          directory = await getExternalStorageDirectory();
-        }
-      } else if (Platform.isIOS) {
-        directory = await getApplicationDocumentsDirectory();
-      } else {
-        // Windows/macOS/Linux - use documents directory
-        directory = await getApplicationDocumentsDirectory();
-      }
-      
-      if (directory == null) {
-        throw Exception('Tidak dapat mengakses direktori penyimpanan');
-      }
-      
-      final file = File('${directory.path}/$fileName');
-      await file.writeAsString(csvContent);
+      // Use platform-specific export helper
+      final result = await export_helper.saveFile(fileName, csvContent);
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.white),
-                    SizedBox(width: 8),
-                    Text('File berhasil disimpan!'),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  file.path,
-                  style: const TextStyle(fontSize: 11, color: Colors.white70),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+        if (result['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.white),
+                      SizedBox(width: 8),
+                      Text('File berhasil disimpan!'),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    result['path'] ?? (kIsWeb ? 'File di-download ke folder Downloads' : ''),
+                    style: const TextStyle(fontSize: 11, color: Colors.white70),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green[600],
+              duration: const Duration(seconds: 4),
             ),
-            backgroundColor: Colors.green[600],
-            duration: const Duration(seconds: 4),
-          ),
-        );
+          );
+        } else {
+          throw Exception(result['error'] ?? 'Unknown error');
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -354,25 +342,20 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         // Search Bar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: TextField(
+          child: SearchBar(
             controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Cari pesanan...',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                        orderProvider.searchOrders('');
-                      },
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              filled: true,
-            ),
+            hintText: 'Cari pesanan...',
+            leading: const Icon(Icons.search),
+            trailing: [
+              if (_searchController.text.isNotEmpty)
+                IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    orderProvider.searchOrders('');
+                  },
+                ),
+            ],
             onChanged: (value) {
               orderProvider.searchOrders(value);
             },
@@ -392,48 +375,24 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
               const SizedBox(width: 8),
               // Quick date filters
               _buildQuickFilterChip('Hari ini', () {
-                if (_activeQuickFilter == 'Hari ini') {
-                  // Clear filter if same is clicked
-                  setState(() { _activeQuickFilter = null; });
-                  orderProvider.filterByDateRange(null, null);
-                } else {
-                  // Set new filter
-                  setState(() { _activeQuickFilter = 'Hari ini'; });
-                  final now = DateTime.now();
-                  final today = DateTime(now.year, now.month, now.day);
-                  orderProvider.filterByDateRange(today, today);
-                }
+                final now = DateTime.now();
+                final today = DateTime(now.year, now.month, now.day);
+                _applyDateFilterPreservingStatus(orderProvider, today, today);
               }, orderProvider),
               const SizedBox(width: 8),
               _buildQuickFilterChip('Minggu ini', () {
-                if (_activeQuickFilter == 'Minggu ini') {
-                  // Clear filter if same is clicked
-                  setState(() { _activeQuickFilter = null; });
-                  orderProvider.filterByDateRange(null, null);
-                } else {
-                  // Set new filter
-                  setState(() { _activeQuickFilter = 'Minggu ini'; });
-                  final now = DateTime.now();
-                  final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-                  final start = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
-                  final end = DateTime(now.year, now.month, now.day);
-                  orderProvider.filterByDateRange(start, end);
-                }
+                final now = DateTime.now();
+                final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+                final start = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+                final end = DateTime(now.year, now.month, now.day);
+                _applyDateFilterPreservingStatus(orderProvider, start, end);
               }, orderProvider),
               const SizedBox(width: 8),
               _buildQuickFilterChip('Bulan ini', () {
-                if (_activeQuickFilter == 'Bulan ini') {
-                  // Clear filter if same is clicked
-                  setState(() { _activeQuickFilter = null; });
-                  orderProvider.filterByDateRange(null, null);
-                } else {
-                  // Set new filter
-                  setState(() { _activeQuickFilter = 'Bulan ini'; });
-                  final now = DateTime.now();
-                  final start = DateTime(now.year, now.month, 1);
-                  final end = DateTime(now.year, now.month, now.day);
-                  orderProvider.filterByDateRange(start, end);
-                }
+                final now = DateTime.now();
+                final start = DateTime(now.year, now.month, 1);
+                final end = DateTime(now.year, now.month, now.day);
+                _applyDateFilterPreservingStatus(orderProvider, start, end);
               }, orderProvider),
               const SizedBox(width: 8),
               // Date range filter
@@ -457,7 +416,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
       child: FilterChip(
         label: Text(_getStatusLabel(status)),
         selected: isSelected,
-        selectedColor: Colors.amber[600], // Warna kuning
+        selectedColor: Theme.of(context).primaryColor,
         checkmarkColor: Colors.white,
         onSelected: (selected) {
           if (status == 'Semua Status') {
@@ -502,13 +461,11 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         ],
       ),
       selected: hasDateFilter,
-      selectedColor: Colors.amber[600], // Warna kuning
+      selectedColor: Theme.of(context).primaryColor,
       onSelected: (selected) {
         if (selected) {
-          setState(() { _activeQuickFilter = null; }); // Clear quick filter state
           _showDateFilterOptions(orderProvider);
         } else {
-          setState(() { _activeQuickFilter = null; }); // Clear quick filter state
           orderProvider.filterByDateRange(null, null);
         }
       },
@@ -531,7 +488,6 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         ],
       ),
       onPressed: hasActiveFilters ? () {
-        setState(() { _activeQuickFilter = null; }); // Reset state
         orderProvider.clearFilters();
         _searchController.clear();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -550,7 +506,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
   }
 
   Widget _buildQuickFilterChip(String label, VoidCallback onPressed, OrderProvider orderProvider) {
-    bool isActive = _activeQuickFilter == label; // Gunakan state tracking
+    bool isActive = _isQuickFilterActive(label, orderProvider);
     
     return ActionChip(
       label: Text(
@@ -562,9 +518,9 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         ),
       ),
       onPressed: onPressed,
-      backgroundColor: isActive ? Colors.amber[600] : Colors.grey[100], // Warna kuning
+      backgroundColor: isActive ? Theme.of(context).primaryColor : Colors.grey[100],
       side: BorderSide(
-        color: isActive ? Colors.amber[600]! : Colors.grey[300]!,
+        color: isActive ? Theme.of(context).primaryColor : Colors.grey[300]!,
       ),
     );
   }
@@ -656,10 +612,9 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     }
     
     String summaryText = '${orders.length} pesanan';
-    // Menghilangkan info filter dari tampilan
-    // if (activeFilters.isNotEmpty) {
-    //   summaryText += ' dengan filter: ${activeFilters.join(', ')}';
-    // }
+    if (activeFilters.isNotEmpty) {
+      summaryText += ' dengan filter: ${activeFilters.join(', ')}';
+    }
     
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -721,7 +676,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
       ),
     );
   }
-  
+ 
   Widget _buildSummaryItem(String label, String value, IconData icon, Color color) {
     return Column(
       children: [
