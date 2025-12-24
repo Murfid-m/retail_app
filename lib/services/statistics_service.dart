@@ -392,6 +392,12 @@ class StatisticsService {
   Future<Map<String, dynamic>> deleteSeededData() async {
     try {
       print('🗑️ Deleting seeded data...');
+      
+      // Debug: print current user info
+      final currentUser = _supabase.auth.currentUser;
+      print('👤 Current user ID: ${currentUser?.id}');
+      print('👤 Current user email: ${currentUser?.email}');
+      
       // Find seeded orders by multiple heuristics so we catch older seed formats too:
       // - user_name starting with '[SEED]'
       // - user_name containing '[SEED]'
@@ -415,78 +421,88 @@ class StatisticsService {
               .select('id, user_name')
               .ilike('user_name', '%seed%')) as List<Map<String, dynamic>>;
 
-      final idSet = <dynamic>{};
+      final idSet = <String>{};  // Use String type explicitly
       final sampleNames = <String>{};
 
       for (var r in bySeedBracket) {
-        if (r['id'] != null) idSet.add(r['id']);
+        if (r['id'] != null) idSet.add(r['id'].toString());
         if (r['user_name'] != null) sampleNames.add(r['user_name'].toString());
       }
       for (var r in byEmailSeed) {
-        if (r['id'] != null) idSet.add(r['id']);
+        if (r['id'] != null) idSet.add(r['id'].toString());
         if (r['user_name'] != null) sampleNames.add(r['user_name'].toString());
       }
       for (var r in byNameSeedFallback) {
-        if (r['id'] != null) idSet.add(r['id']);
+        if (r['id'] != null) idSet.add(r['id'].toString());
         if (r['user_name'] != null) sampleNames.add(r['user_name'].toString());
       }
 
       if (idSet.isEmpty) {
         final msg = 'ℹ️ No seeded orders found to delete (patterns: %[SEED]%, seed_%, %seed%)';
         print(msg);
-        return {'success': false, 'message': msg, 'candidates': 0};
+        return {'success': true, 'message': msg, 'candidates': 0, 'deleted': 0};
       }
 
       final ids = idSet.toList();
       print('🗑️ Found ${ids.length} candidate seeded orders. Sample names: ${sampleNames.take(5).toList()}');
 
+      final warnings = <String>[];
       final errors = <String>[];
-      var deletedCount = 0;
+      var deletedOrderItemsCount = 0;
+      var deletedOrdersCount = 0;
 
       // Delete order_items linked to these orders first (avoid orphan rows)
+      // Note: seeder may not create order_items, so empty result is OK
       for (var oid in ids) {
         try {
           final res = await _supabase.from('order_items').delete().eq('order_id', oid).select('id');
           if (res is List && res.isNotEmpty) {
-            // deleted
-          } else {
-            final warn = 'No order_items deleted for order $oid (maybe none existed or permission denied)';
-            print('⚠️ $warn');
-            errors.add(warn);
+            deletedOrderItemsCount += res.length;
+            print('✅ Deleted ${res.length} order_items for order $oid');
           }
+          // Don't add warning for empty - seeder doesn't create order_items
         } catch (e) {
           final err = 'Failed deleting order_items for order $oid: $e';
           print('⚠️ $err');
-          errors.add(err);
+          warnings.add(err);
         }
       }
+
+      print('📦 Total order_items deleted: $deletedOrderItemsCount');
 
       // Finally delete orders (delete one-by-one to avoid compatibility issues / RLS per-row diagnostics)
       for (var oid in ids) {
         try {
           final res = await _supabase.from('orders').delete().eq('id', oid).select('id');
           if (res is List && res.isNotEmpty) {
-            deletedCount += res.length;
+            deletedOrdersCount += res.length;
+            print('✅ Deleted order $oid');
           } else {
-            final warn = 'No orders deleted for id $oid (permission or not found)';
+            final warn = 'Order $oid: DELETE returned empty (RLS policy may be blocking or row not found)';
             print('⚠️ $warn');
             errors.add(warn);
           }
         } catch (e) {
           final err = 'Failed deleting order id $oid: $e';
-          print('⚠️ $err');
+          print('❌ $err');
           errors.add(err);
         }
       }
 
-      final msg = 'Attempted to delete ${ids.length} seeded orders, deleted: $deletedCount, errors: ${errors.length}';
-      print('✅ $msg');
+      final success = deletedOrdersCount == ids.length;
+      final msg = success 
+          ? '✅ Successfully deleted $deletedOrdersCount seeded orders'
+          : '⚠️ Attempted: ${ids.length}, Deleted: $deletedOrdersCount, Failed: ${errors.length}';
+      print(msg);
+      
       return {
-        'success': errors.isEmpty,
+        'success': success,
         'message': msg,
         'candidates': ids.length,
-        'deleted': deletedCount,
+        'deleted': deletedOrdersCount,
+        'deleted_items': deletedOrderItemsCount,
         'errors': errors,
+        'warnings': warnings,
         'sample_names': sampleNames.take(10).toList(),
       };
     } catch (e) {

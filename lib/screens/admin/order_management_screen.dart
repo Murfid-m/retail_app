@@ -1,12 +1,16 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../models/order_model.dart';
 import '../../widgets/skeleton_loading.dart';
+
+// Conditional imports for platform-specific file saving
+import 'export_helper_stub.dart'
+    if (dart.library.html) 'export_helper_web.dart'
+    if (dart.library.io) 'export_helper_io.dart' as export_helper;
 
 class OrderManagementScreen extends StatefulWidget {
   const OrderManagementScreen({super.key});
@@ -17,8 +21,6 @@ class OrderManagementScreen extends StatefulWidget {
 
 class _OrderManagementScreenState extends State<OrderManagementScreen> {
   final TextEditingController _searchController = TextEditingController();
-  String? _activeQuickFilter; // Melacak filter tanggal yang aktif
-  
   final List<String> _statusOptions = [
     'Semua Status',
     'pending',
@@ -58,27 +60,6 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
   void _applyDateFilterPreservingStatus(OrderProvider orderProvider, DateTime startDate, DateTime endDate) {
     // Apply date filter without resetting status filter
     orderProvider.filterByDateRange(startDate, endDate);
-    
-    // Show confirmation with combined filter info
-    String message = 'Filter diterapkan: ${DateFormat('dd MMM yyyy').format(startDate)}';
-    if (startDate != endDate) {
-      message = 'Filter diterapkan: ${DateFormat('dd MMM').format(startDate)} - ${DateFormat('dd MMM yyyy').format(endDate)}';
-    }
-    
-    if (orderProvider.selectedStatuses.isNotEmpty) {
-      final statusLabels = orderProvider.selectedStatuses
-          .map((status) => _getStatusLabel(status))
-          .toList();
-      message += ' + Status: ${statusLabels.join(', ')}';
-    }
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 2),
-        backgroundColor: Colors.green[600],
-      ),
-    );
   }
   
   void _exportOrders(OrderProvider orderProvider) {
@@ -262,54 +243,40 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
       final now = DateTime.now();
       final fileName = 'pesanan_${DateFormat('yyyyMMdd_HHmmss').format(now)}.csv';
       
-      // Get downloads directory based on platform
-      Directory? directory;
-      if (Platform.isAndroid) {
-        directory = Directory('/storage/emulated/0/Download');
-        if (!await directory.exists()) {
-          directory = await getExternalStorageDirectory();
-        }
-      } else if (Platform.isIOS) {
-        directory = await getApplicationDocumentsDirectory();
-      } else {
-        // Windows/macOS/Linux - use documents directory
-        directory = await getApplicationDocumentsDirectory();
-      }
-      
-      if (directory == null) {
-        throw Exception('Tidak dapat mengakses direktori penyimpanan');
-      }
-      
-      final file = File('${directory.path}/$fileName');
-      await file.writeAsString(csvContent);
+      // Use platform-specific export helper
+      final result = await export_helper.saveFile(fileName, csvContent);
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.white),
-                    SizedBox(width: 8),
-                    Text('File berhasil disimpan!'),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  file.path,
-                  style: const TextStyle(fontSize: 11, color: Colors.white70),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+        if (result['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.white),
+                      SizedBox(width: 8),
+                      Text('File berhasil disimpan!'),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    result['path'] ?? (kIsWeb ? 'File di-download ke folder Downloads' : ''),
+                    style: const TextStyle(fontSize: 11, color: Colors.white70),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green[600],
+              duration: const Duration(seconds: 4),
             ),
-            backgroundColor: Colors.green[600],
-            duration: const Duration(seconds: 4),
-          ),
-        );
+          );
+        } else {
+          throw Exception(result['error'] ?? 'Unknown error');
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -354,25 +321,20 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         // Search Bar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: TextField(
+          child: SearchBar(
             controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Cari pesanan...',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                        orderProvider.searchOrders('');
-                      },
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              filled: true,
-            ),
+            hintText: 'Cari pesanan...',
+            leading: const Icon(Icons.search),
+            trailing: [
+              if (_searchController.text.isNotEmpty)
+                IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    orderProvider.searchOrders('');
+                  },
+                ),
+            ],
             onChanged: (value) {
               orderProvider.searchOrders(value);
             },
@@ -389,53 +351,44 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
               ..._statusOptions.map((status) {
                 return _buildStatusChip(status, orderProvider);
               }).toList(),
-              const SizedBox(width: 8),
-              // Quick date filters
+            ],
+          ),
+        ),
+        
+        // Garis Pemisah
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Divider(
+            height: 1,
+            thickness: 1,
+          ),
+        ),
+        
+        // Date Filters
+        SizedBox(
+          height: 50,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: [
               _buildQuickFilterChip('Hari ini', () {
-                if (_activeQuickFilter == 'Hari ini') {
-                  // Clear filter if same is clicked
-                  setState(() { _activeQuickFilter = null; });
-                  orderProvider.filterByDateRange(null, null);
-                } else {
-                  // Set new filter
-                  setState(() { _activeQuickFilter = 'Hari ini'; });
-                  final now = DateTime.now();
-                  final today = DateTime(now.year, now.month, now.day);
-                  orderProvider.filterByDateRange(today, today);
-                }
+                final now = DateTime.now();
+                final today = DateTime(now.year, now.month, now.day);
+                _applyDateFilterPreservingStatus(orderProvider, today, today);
               }, orderProvider),
-              const SizedBox(width: 8),
               _buildQuickFilterChip('Minggu ini', () {
-                if (_activeQuickFilter == 'Minggu ini') {
-                  // Clear filter if same is clicked
-                  setState(() { _activeQuickFilter = null; });
-                  orderProvider.filterByDateRange(null, null);
-                } else {
-                  // Set new filter
-                  setState(() { _activeQuickFilter = 'Minggu ini'; });
-                  final now = DateTime.now();
-                  final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-                  final start = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
-                  final end = DateTime(now.year, now.month, now.day);
-                  orderProvider.filterByDateRange(start, end);
-                }
+                final now = DateTime.now();
+                final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+                final start = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+                final end = DateTime(now.year, now.month, now.day);
+                _applyDateFilterPreservingStatus(orderProvider, start, end);
               }, orderProvider),
-              const SizedBox(width: 8),
               _buildQuickFilterChip('Bulan ini', () {
-                if (_activeQuickFilter == 'Bulan ini') {
-                  // Clear filter if same is clicked
-                  setState(() { _activeQuickFilter = null; });
-                  orderProvider.filterByDateRange(null, null);
-                } else {
-                  // Set new filter
-                  setState(() { _activeQuickFilter = 'Bulan ini'; });
-                  final now = DateTime.now();
-                  final start = DateTime(now.year, now.month, 1);
-                  final end = DateTime(now.year, now.month, now.day);
-                  orderProvider.filterByDateRange(start, end);
-                }
+                final now = DateTime.now();
+                final start = DateTime(now.year, now.month, 1);
+                final end = DateTime(now.year, now.month, now.day);
+                _applyDateFilterPreservingStatus(orderProvider, start, end);
               }, orderProvider),
-              const SizedBox(width: 8),
               // Date range filter
               _buildDateRangeChip(orderProvider),
               const SizedBox(width: 8),
@@ -455,10 +408,21 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(
-        label: Text(_getStatusLabel(status)),
+        label: Text(
+          _getStatusLabel(status),
+          style: TextStyle(
+            color: isSelected && Theme.of(context).brightness == Brightness.dark
+                ? Colors.black // Text hitam pada background kuning (dark mode)
+                : null, // Default color untuk light mode
+          ),
+        ),
         selected: isSelected,
-        selectedColor: Colors.amber[600], // Warna kuning
-        checkmarkColor: Colors.white,
+        selectedColor: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFFFFC20E) // Kuning pada dark mode
+            : Theme.of(context).primaryColor,
+        checkmarkColor: Theme.of(context).brightness == Brightness.dark
+            ? Colors.black // Checkmark hitam pada background kuning
+            : Colors.white,
         onSelected: (selected) {
           if (status == 'Semua Status') {
             orderProvider.filterByStatus(null); // Clear all status filters
@@ -502,13 +466,13 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         ],
       ),
       selected: hasDateFilter,
-      selectedColor: Colors.amber[600], // Warna kuning
+      selectedColor: Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFFFFC20E) // Kuning pada dark mode
+          : Theme.of(context).primaryColor,
       onSelected: (selected) {
         if (selected) {
-          setState(() { _activeQuickFilter = null; }); // Clear quick filter state
           _showDateFilterOptions(orderProvider);
         } else {
-          setState(() { _activeQuickFilter = null; }); // Clear quick filter state
           orderProvider.filterByDateRange(null, null);
         }
       },
@@ -531,7 +495,6 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         ],
       ),
       onPressed: hasActiveFilters ? () {
-        setState(() { _activeQuickFilter = null; }); // Reset state
         orderProvider.clearFilters();
         _searchController.clear();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -541,30 +504,50 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
           ),
         );
       } : null,
-      backgroundColor: hasActiveFilters ? Colors.red[50] : Colors.grey[100],
-      side: BorderSide(color: hasActiveFilters ? Colors.red[200]! : Colors.grey[300]!),
+      backgroundColor: hasActiveFilters 
+          ? (Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFFFFC20E).withOpacity(0.2) // Kuning transparan pada dark mode
+              : Colors.red[50])
+          : Colors.grey[100],
+      side: BorderSide(
+        color: hasActiveFilters 
+            ? (Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFFFFC20E) // Border kuning pada dark mode
+                : Colors.red[200]!)
+            : Colors.grey[300]!
+      ),
       labelStyle: TextStyle(
-        color: hasActiveFilters ? Colors.red[700] : Colors.grey[500],
+        color: hasActiveFilters 
+            ? (Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFFFFC20E) // Teks kuning pada dark mode
+                : Colors.red[700])
+            : Colors.grey[500],
       ),
     );
   }
 
   Widget _buildQuickFilterChip(String label, VoidCallback onPressed, OrderProvider orderProvider) {
-    bool isActive = _activeQuickFilter == label; // Gunakan state tracking
+    bool isActive = _isQuickFilterActive(label, orderProvider);
     
-    return ActionChip(
-      label: Text(
-        label,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-          color: isActive ? Colors.white : null,
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        label: Text(
+          label,
+          style: TextStyle(
+            color: isActive && Theme.of(context).brightness == Brightness.dark
+                ? Colors.black // Teks hitam pada background kuning dark mode
+                : null,
+          ),
         ),
-      ),
-      onPressed: onPressed,
-      backgroundColor: isActive ? Colors.amber[600] : Colors.grey[100], // Warna kuning
-      side: BorderSide(
-        color: isActive ? Colors.amber[600]! : Colors.grey[300]!,
+        selected: isActive,
+        selectedColor: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFFFFC20E) // Kuning pada dark mode
+            : Theme.of(context).primaryColor,
+        checkmarkColor: Theme.of(context).brightness == Brightness.dark
+            ? Colors.black // Checkmark hitam pada background kuning
+            : Colors.white,
+        onSelected: (selected) => onPressed(),
       ),
     );
   }
@@ -656,41 +639,57 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     }
     
     String summaryText = '${orders.length} pesanan';
-    // Menghilangkan info filter dari tampilan
-    // if (activeFilters.isNotEmpty) {
-    //   summaryText += ' dengan filter: ${activeFilters.join(', ')}';
-    // }
+    
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).primaryColor.withOpacity(0.1),
+        color: isDark 
+            ? const Color(0xFFFFC20E).withOpacity(0.15) 
+            : Theme.of(context).primaryColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).primaryColor.withOpacity(0.2)),
+        border: Border.all(
+          color: isDark 
+              ? const Color(0xFFFFC20E).withOpacity(0.3) 
+              : Theme.of(context).primaryColor.withOpacity(0.2),
+        ),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            summaryText,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).primaryColor,
-            ),
-          ),
-          const SizedBox(height: 8),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              Expanded(
-                child: _buildSummaryItem(
-                  'Total Revenue', 
-                  'Rp ${_formatPrice(totalRevenue)}', 
-                  Icons.attach_money,
-                  Colors.green,
+              Text(
+                summaryText,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? const Color(0xFFFFC20E) : Theme.of(context).primaryColor,
                 ),
               ),
+              Text(
+                'Rp ${_formatPrice(totalRevenue)}',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.green,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Divider(
+            color: isDark 
+                ? const Color(0xFFFFC20E).withOpacity(0.3) 
+                : Theme.of(context).primaryColor.withOpacity(0.2),
+            thickness: 1,
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
               Expanded(
                 child: _buildSummaryItem(
                   'Menunggu', 
@@ -721,7 +720,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
       ),
     );
   }
-  
+ 
   Widget _buildSummaryItem(String label, String value, IconData icon, Color color) {
     return Column(
       children: [
@@ -812,16 +811,6 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     if (picked != null) {
       // Set same date for start and end to filter single day
       orderProvider.filterByDateRange(picked, picked);
-      
-      // Show confirmation
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Filter diterapkan untuk: ${DateFormat('dd MMM yyyy').format(picked)}',
-          ),
-          duration: const Duration(seconds: 2),
-        ),
-      );
     }
   }
 
@@ -851,16 +840,6 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
 
     if (picked != null) {
       orderProvider.filterByDateRange(picked.start, picked.end);
-      
-      // Show confirmation
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Filter diterapkan: ${DateFormat('dd MMM').format(picked.start)} - ${DateFormat('dd MMM yyyy').format(picked.end)}',
-          ),
-          duration: const Duration(seconds: 2),
-        ),
-      );
     }
   }
 
@@ -868,57 +847,153 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
   Widget build(BuildContext context) {
     return Consumer<OrderProvider>(
       builder: (context, orderProvider, child) {
-        return Column(
-          children: [
-            _buildSearchAndFilter(orderProvider),
-            _buildOrdersSummary(orderProvider),
-            Expanded(
-              child: orderProvider.isLoading
-                  ? ListSkeleton(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: 5,
-                      itemBuilder: (context, index) => const OrderCardSkeleton(),
-                      separator: const SizedBox(height: 12),
-                    )
-                  : orderProvider.orders.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.receipt_long_outlined,
-                                size: 100,
-                                color: Colors.grey[300],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                orderProvider.searchQuery.isNotEmpty ||
-                                        orderProvider.selectedStatus != null ||
-                                        orderProvider.startDate != null ||
-                                        orderProvider.endDate != null
-                                    ? 'Tidak ada pesanan ditemukan'
-                                    : 'Belum ada pesanan',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey[600],
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        )
-                      : RefreshIndicator(
-                          onRefresh: () => orderProvider.loadAllOrders(),
-                          child: ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: orderProvider.orders.length,
-                            itemBuilder: (context, index) {
-                              return _buildOrderCard(orderProvider.orders[index], orderProvider);
-                            },
-                          ),
+        // Show loading state
+        if (orderProvider.isLoading) {
+          return CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                floating: true,
+                snap: true,
+                automaticallyImplyLeading: false,
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                surfaceTintColor: Colors.transparent,
+                elevation: 0,
+                toolbarHeight: 400, // Ditambah untuk menampung filtering yang terpisah
+                flexibleSpace: FlexibleSpaceBar(
+                  background: SafeArea(
+                    bottom: false,
+                    child: SingleChildScrollView(
+                      physics: const NeverScrollableScrollPhysics(),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildSearchAndFilter(orderProvider),
+                          _buildOrdersSummary(orderProvider),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: OrderCardSkeleton(),
+                    ),
+                    childCount: 5,
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+        
+        // Show empty state
+        if (orderProvider.orders.isEmpty) {
+          return CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                floating: true,
+                snap: true,
+                automaticallyImplyLeading: false,
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                surfaceTintColor: Colors.transparent,
+                elevation: 0,
+                toolbarHeight: 400, // Ditambah untuk menampung filtering yang terpisah
+                flexibleSpace: FlexibleSpaceBar(
+                  background: SafeArea(
+                    bottom: false,
+                    child: SingleChildScrollView(
+                      physics: const NeverScrollableScrollPhysics(),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildSearchAndFilter(orderProvider),
+                          _buildOrdersSummary(orderProvider),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.receipt_long_outlined,
+                        size: 100,
+                        color: Colors.grey[300],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        orderProvider.searchQuery.isNotEmpty ||
+                                orderProvider.selectedStatuses.isNotEmpty ||
+                                orderProvider.startDate != null ||
+                                orderProvider.endDate != null
+                            ? 'Tidak ada pesanan ditemukan'
+                            : 'Belum ada pesanan',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.grey[600],
                         ),
-            ),
-          ],
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+        
+        // Show orders list
+        return RefreshIndicator(
+          onRefresh: () => orderProvider.loadAllOrders(),
+          child: CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                floating: true,
+                snap: true,
+                automaticallyImplyLeading: false,
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                surfaceTintColor: Colors.transparent,
+                elevation: 0,
+                toolbarHeight: 400, // Ditambah untuk menampung filtering yang terpisah
+                flexibleSpace: FlexibleSpaceBar(
+                  background: SafeArea(
+                    bottom: false,
+                    child: SingleChildScrollView(
+                      physics: const NeverScrollableScrollPhysics(),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildSearchAndFilter(orderProvider),
+                          _buildOrdersSummary(orderProvider),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      return _buildOrderCard(orderProvider.orders[index], orderProvider);
+                    },
+                    childCount: orderProvider.orders.length,
+                  ),
+                ),
+              ),
+            ],
+          ),
         );
       },
     );

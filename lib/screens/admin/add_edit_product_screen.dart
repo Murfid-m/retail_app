@@ -120,10 +120,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
           _newImageBytes[i],
           fileName,
         );
-        if (url != null) {
-          uploadedUrls.add(url);
-        }
-      } catch (e) {
+        uploadedUrls.add(url);
+            } catch (e) {
         print('Error uploading image $i: $e');
       }
     }

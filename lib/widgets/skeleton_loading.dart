@@ -191,7 +191,9 @@ class StatCardSkeleton extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 const SizedBox(width: 8),
-                const SkeletonLoading(width: 80, height: 14),
+                Expanded(
+                  child: const SkeletonLoading(width: double.infinity, height: 14),
+                ),
               ],
             ),
             const SizedBox(height: 12),
